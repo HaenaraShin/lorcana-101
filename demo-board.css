@@ -1,0 +1,2111 @@
+/* =============================================================
+   Lorcana 101 — Board Demo v7
+   Mirror-symmetric, larger cards, players closer to divider
+   ============================================================= */
+
+:root {
+  --bg-1: #0a0e1a;
+  --bg-3: #0c0f1f;
+
+  --text: #e8ecf3;
+  --text-mute: #8590a8;
+  --text-dim: #5a6478;
+  --accent: #f5c84b;
+
+  --opp-tint: rgba(226, 85, 87, 0.06);
+  --self-tint: rgba(79, 143, 217, 0.06);
+
+  /* Card sizes — Play +10%, Inkwell +10%, Deck/Discard +22% */
+  --card-w: 182px;
+  --card-h: 253px;
+  --card-radius: 10px;
+
+  --side-card-w: 110px;
+  --side-card-h: 154px;
+
+  --ink-card-w: 121px;
+  --ink-card-h: 170px;
+
+  --hand-card-w: 143px;
+  --hand-card-h: 200px;
+
+  --card-back-url: url('card_back.jpeg');
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: -apple-system, "SF Pro KR", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(155, 108, 214, 0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(79, 143, 217, 0.15) 0%, transparent 50%),
+    linear-gradient(180deg, var(--bg-1) 0%, var(--bg-3) 100%);
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 60% 70%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 80% 20%, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 30% 80%, rgba(255, 255, 255, 0.25), transparent),
+    radial-gradient(2px 2px at 70% 40%, rgba(245, 200, 75, 0.3), transparent);
+  opacity: 0.65;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================================
+   TEXT MODE TOGGLE (top bar)
+   ============================================================ */
+.text-mode-toggle {
+  position: fixed;
+  top: 8px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  padding: 4px 8px;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  backdrop-filter: blur(8px);
+}
+.toggle-label {
+  font-size: 0.7em;
+  color: var(--text-mute);
+  margin: 0 8px 0 4px;
+  letter-spacing: 0.08em;
+}
+.mode-btn {
+  background: transparent;
+  color: var(--text-mute);
+  border: 1px solid transparent;
+  border-radius: 18px;
+  padding: 5px 12px;
+  font-size: 0.75em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.mode-btn:hover { color: var(--text); }
+.mode-btn.active {
+  background: var(--accent);
+  color: var(--bg-1);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+/* ============================================================
+   ROOT GRID
+   ============================================================ */
+.demo-root {
+  position: relative;
+  z-index: 1;
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 110px;
+  gap: 6px;
+  padding: 14px 18px;
+}
+
+/* ============================================================
+   BOARD
+   ============================================================ */
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  position: relative;
+}
+
+.player-side {
+  position: relative;
+  border-radius: 10px;
+  padding: 8px 16px;
+  min-height: 0;
+  transition: background 0.55s ease, border-color 0.55s ease, box-shadow 0.55s ease;
+}
+.player-side.opponent {
+  flex: 0.72;
+  background: var(--opp-tint);
+  border: 1px solid rgba(226, 85, 87, 0.18);
+}
+.player-side.self {
+  flex: 1;
+  background: var(--self-tint);
+  border: 1px solid rgba(79, 143, 217, 0.18);
+}
+/* Active player highlight — tint deepened + subtle inner glow.
+   ~10% brighter board feel without lifting the cards/contents. */
+.player-side.opponent.active {
+  background: rgba(226, 85, 87, 0.11);
+  border-color: rgba(226, 85, 87, 0.32);
+  box-shadow: inset 0 0 60px rgba(255, 255, 255, 0.05);
+}
+.player-side.self.active {
+  background: rgba(79, 143, 217, 0.11);
+  border-color: rgba(79, 143, 217, 0.32);
+  box-shadow: inset 0 0 60px rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================================
+   LR COLUMN (Deck/Discard) — absolute positioned
+   so Play Area can be true-centered
+   ============================================================ */
+.lr-column {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  z-index: 1;
+}
+/* Opponent: LR-column on LEFT side */
+.opp-lr {
+  left: 16px;
+  bottom: 8px;   /* Stay near divider (opp's "up" = bottom of screen) */
+  /* Opp deck/discard shrunk 5% to fit smaller opp area at narrow viewports */
+  --side-card-w: 105px;
+  --side-card-h: 146px;
+}
+/* Self: LR-column on RIGHT side */
+.self-lr {
+  right: 16px;
+  top: 8px;      /* Stay near divider (self's "up" = top of self area) */
+}
+
+.zone { position: relative; }
+
+/* Zone wrapper — thin border + small label to distinguish deck/discard */
+.zone-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: calc(var(--card-radius) + 4px);
+}
+.zone-label {
+  font-size: 0.55em;
+  letter-spacing: 0.22em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* Deck — back with stack shadow (shadow shifts away from divider) */
+.deck-zone {
+  width: var(--side-card-w);
+  height: var(--side-card-h);
+  position: relative;
+  overflow: visible;
+}
+.deck-zone::before, .deck-zone::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--side-card-w);
+  height: var(--side-card-h);
+  background: var(--card-back-url) center/cover;
+  border-radius: var(--card-radius);
+  border: 1px solid rgba(245, 200, 75, 0.15);
+  z-index: 0;
+}
+/* Opponent deck: shadow goes UP (away from divider) — into own area, not into self area */
+.opponent .deck-zone::before { transform: translate(2px, -2px); opacity: 0.55; filter: brightness(0.7); }
+.opponent .deck-zone::after  { transform: translate(4px, -4px); opacity: 0.35; filter: brightness(0.55); }
+/* Self deck: shadow goes DOWN (away from divider) */
+.self .deck-zone::before { transform: translate(2px, 2px); opacity: 0.55; filter: brightness(0.7); }
+.self .deck-zone::after  { transform: translate(4px, 4px); opacity: 0.35; filter: brightness(0.55); }
+.deck-zone .card-back {
+  position: relative;
+  z-index: 1;
+  width: var(--side-card-w);
+  height: var(--side-card-h);
+}
+
+/* Discard */
+.discard-zone {
+  width: var(--side-card-w);
+  height: var(--side-card-h);
+}
+.discard-zone .card-stack {
+  position: relative;
+  width: var(--side-card-w);
+  height: var(--side-card-h);
+}
+.discard-zone .card-stack .card {
+  position: absolute;
+  top: 0; left: 0;
+  width: var(--side-card-w);
+  height: var(--side-card-h);
+}
+.discard-zone .empty-discard {
+  width: var(--side-card-w);
+  height: var(--side-card-h);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: var(--card-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55em;
+  color: var(--text-dim);
+  letter-spacing: 0.2em;
+}
+
+/* ============================================================
+   PLAY ZONE — true center horizontally; near divider vertically
+   ============================================================ */
+.play-zone {
+  position: absolute;
+  left: 0; right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  height: calc(var(--card-h) + 8px);
+  z-index: 3;
+}
+/* Opponent: play anchored to bottom (near divider, slight bottom margin) */
+.opponent .play-zone { bottom: 16px; }
+/* Self: play near divider, with breathing room from divider line */
+.self .play-zone     { top: 18px; }
+
+/* ============================================================
+   BOARD DIVIDER
+   ============================================================ */
+.board-divider {
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(245, 200, 75, 0.55) 25%,
+    rgba(245, 200, 75, 0.55) 75%,
+    transparent 100%);
+  margin: 6px 0;
+  position: relative;
+  flex-shrink: 0;
+  z-index: 0;
+}
+.divider-mark {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg-1);
+  padding: 0 14px;
+  color: var(--accent);
+  font-size: 1.2em;
+  text-shadow: 0 0 10px rgba(245, 200, 75, 0.5);
+}
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+.card {
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: var(--card-radius);
+  position: relative;
+  flex-shrink: 0;
+  transition: transform 0.55s cubic-bezier(0.34, 1.2, 0.64, 1),
+              margin 0.55s cubic-bezier(0.34, 1.2, 0.64, 1),
+              box-shadow 0.2s ease,
+              filter 0.45s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+.card img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.discard-zone .card {
+  width: var(--side-card-w);
+  height: var(--side-card-h);
+}
+
+.card.exerted {
+  transform: rotate(90deg);
+  filter: brightness(0.82) saturate(0.85);
+  margin: 0 calc((var(--card-h) - var(--card-w)) / 2);
+}
+
+/* Shift stack — base card peeking out behind the top card */
+.card.shifted {
+  overflow: visible;
+}
+.card.shifted .shift-base-img {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--card-radius);
+  z-index: 0;
+  filter: brightness(0.78);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+.card.shifted > img:not(.shift-base-img) {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--card-radius);
+}
+
+.card:hover {
+  transform: scale(1.6) translateY(-20px);
+  z-index: 200;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(245, 200, 75, 0.3);
+  filter: none;
+  cursor: zoom-in;
+}
+.card.exerted:hover {
+  transform: rotate(90deg) scale(1.6);
+}
+
+.dmg-counter {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 46px; height: 46px;
+  background: linear-gradient(135deg, #e25557 0%, #b03234 100%);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.2em;
+  box-shadow: 0 4px 16px rgba(226, 85, 87, 0.75), 0 0 0 3px rgba(255, 255, 255, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  z-index: 5;
+  /* Drop-in: start 20px above + invisible, settle into place. */
+  animation: counter-drop 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) backwards;
+}
+@keyframes counter-drop {
+  0%   { opacity: 0; transform: translate(-50%, calc(-50% - 20px)); }
+  100% { opacity: 1; transform: translate(-50%, -50%); }
+}
+/* Keep the counter upright when the card itself is rotated (exerted),
+   and mirror the drop-in animation with the rotation pre-applied. */
+.card.exerted .dmg-counter {
+  transform: translate(-50%, -50%) rotate(-90deg);
+  animation: counter-drop-exerted 0.5s cubic-bezier(0.34, 1.4, 0.64, 1) backwards;
+}
+@keyframes counter-drop-exerted {
+  0%   { opacity: 0; transform: translate(-50%, calc(-50% - 20px)) rotate(-90deg); }
+  100% { opacity: 1; transform: translate(-50%, -50%) rotate(-90deg); }
+}
+
+/* Banish flyer — card flying from play to discard pile. */
+.play-flyer.banish-flyer {
+  /* uses .play-flyer transition; transform property is now animated too. */
+}
+
+/* ============================================================
+   CARD BACK (for deck)
+   ============================================================ */
+.card-back {
+  width: var(--side-card-w);
+  height: var(--side-card-h);
+  border-radius: var(--card-radius);
+  background: var(--card-back-url) center/cover no-repeat;
+  flex-shrink: 0;
+  border: 1px solid rgba(245, 200, 75, 0.15);
+}
+
+/* ============================================================
+   INKWELL — bottom-left (self) / top-right (opp, mirror)
+   Larger cards (= 110×154), heavily overlapping each other
+   ============================================================ */
+.inkwell-strip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  z-index: 2;
+}
+.self-inkwell-strip {
+  left: 110px;     /* offset from board edge */
+  bottom: 6px;
+}
+.opp-inkwell-strip {
+  right: 110px;
+  top: 6px;
+}
+
+.ink-card {
+  width: var(--ink-card-w);
+  height: var(--ink-card-h);
+  border-radius: 7px;
+  background: var(--card-back-url) center/cover no-repeat;
+  flex-shrink: 0;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(245, 200, 75, 0.2);
+  transition: transform 0.55s cubic-bezier(0.34, 1.2, 0.64, 1), filter 0.5s ease;
+  margin-left: -68px; /* heavy overlap */
+  /* Keep transform applied at all times so every ink-card has a consistent
+     stacking context. Without this, adding .exerted (transform: rotate(90deg))
+     would create a new stacking context mid-transition and pop the card above
+     its siblings, causing a visible z-order flicker. */
+  transform: rotate(0deg);
+}
+.ink-card:first-child { margin-left: 0; }
+
+.ink-card.exerted {
+  transform: rotate(90deg);
+  filter: brightness(0.7) saturate(0.7);
+}
+
+/* ============================================================
+   RIGHT LORE COLUMN — diamonds gathered near divider, mild gap
+   ============================================================ */
+.lore-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.lore-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* Match board's flex ratio (opp 0.72 : divider 14px : self 1) so the
+   midpoint between the two diamonds aligns with the gold divider center. */
+.opp-lore-block  { flex: 0.72; justify-content: flex-end;   padding-bottom: 16px; }
+.self-lore-block { flex: 1;    justify-content: flex-start; padding-top: 16px; }
+.lore-divider-gap { height: 14px; flex-shrink: 0; }
+
+.lore-diamond {
+  width: 76px;
+  height: 76px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(245, 200, 75, 0.9) 0%, rgba(200, 148, 56, 0.72) 100%);
+  transform: rotate(45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 22px rgba(245, 200, 75, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.35);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+}
+.lore-num {
+  font-size: 1.7em;
+  font-weight: 700;
+  color: #1a1340;
+  transform: rotate(-45deg);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.45);
+}
+@keyframes lore-bump {
+  0%, 100% { transform: rotate(-45deg) scale(1); }
+  50%      { transform: rotate(-45deg) scale(1.45); text-shadow: 0 0 14px rgba(245, 200, 75, 1); }
+}
+.lore-num.lore-bump {
+  animation: lore-bump 0.55s ease;
+}
+
+/* ============================================================
+   SELF HAND — fan, 1/3 below screen
+   ============================================================ */
+.self-hand-fan {
+  position: fixed;
+  bottom: -60px;
+  /* 보드 horizontal center = viewport center 에서 좌측으로 우측 컬럼(110) +
+     gap(6) + right padding(18) 의 절반만큼 보정 */
+  left: calc(50% - 67px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+  pointer-events: none;
+  width: auto;
+}
+
+.self-hand-fan .hand-card {
+  width: var(--hand-card-w);
+  height: var(--hand-card-h);
+  border-radius: 9px;
+  position: relative;
+  margin: 0 -40px;
+  transition: transform 0.25s cubic-bezier(0.4, 0.0, 0.2, 1), box-shadow 0.2s ease;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  pointer-events: auto;
+  transform-origin: 50% 100%;
+  transform: rotate(calc(var(--i, 0) * 8deg)) translateY(calc(var(--i-abs, 0) * 7px));
+}
+.self-hand-fan .hand-card img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.self-hand-fan .hand-card.back {
+  background: var(--card-back-url) center/cover no-repeat;
+  border-color: rgba(245, 200, 75, 0.2);
+}
+.self-hand-fan .hand-card:hover {
+  transform: rotate(0deg) translateY(-130px) scale(1.4);
+  z-index: 300;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(245, 200, 75, 0.4);
+  cursor: zoom-in;
+  filter: brightness(1.05);
+}
+
+/* ============================================================
+   TEXT — Subtitle box (Option A)
+   ============================================================ */
+.subtitle-box {
+  position: fixed;
+  top: calc(50% + 30px);   /* sits just under the gold divider, in PlayerA's area */
+  left: 22px;
+  z-index: 400;
+  max-width: 320px;
+  background: rgba(10, 14, 26, 0.85);
+  border: 1px solid rgba(245, 200, 75, 0.3);
+  border-radius: 12px;
+  padding: 12px 20px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.subtitle-box.hidden {
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+}
+.subtitle-step {
+  font-size: 0.75em;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.subtitle-text {
+  font-size: 1em;
+  line-height: 1.5;
+  color: var(--text);
+}
+.subtitle-text em { color: var(--accent); font-style: normal; font-weight: 500; }
+.subtitle-text strong { color: #fff; font-weight: 600; }
+
+/* ============================================================
+   TEXT — Dialog speech bubbles (Option B)
+   ============================================================ */
+.dialog-bubble {
+  position: absolute;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(245, 245, 250, 0.94) 100%);
+  color: #1a1340;
+  border: 2px solid var(--accent);
+  border-radius: 14px;
+  padding: 8px 14px;
+  font-size: 0.85em;
+  font-weight: 600;
+  white-space: nowrap;
+  z-index: 250;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 200, 75, 0.3);
+  transition: opacity 0.3s ease;
+  max-width: 220px;
+  white-space: normal;
+  line-height: 1.3;
+}
+.dialog-bubble.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.dialog-bubble::before {
+  content: '';
+  position: absolute;
+  width: 0; height: 0;
+  border-style: solid;
+}
+/* Speech tail pointing down (for bubbles above cards) */
+.dialog-bubble.tail-down::before {
+  border-width: 12px 8px 0 8px;
+  border-color: var(--accent) transparent transparent transparent;
+  bottom: -12px;
+  left: 28px;
+}
+.dialog-bubble.tail-down::after {
+  content: '';
+  position: absolute;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 9px 6px 0 6px;
+  border-color: rgba(255, 255, 255, 0.97) transparent transparent transparent;
+  bottom: -8px;
+  left: 30px;
+}
+.dialog-bubble.tail-up::before {
+  border-width: 0 8px 12px 8px;
+  border-color: transparent transparent var(--accent) transparent;
+  top: -12px;
+  left: 28px;
+}
+.dialog-bubble.tail-up::after {
+  content: '';
+  position: absolute;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 0 6px 9px 6px;
+  border-color: transparent transparent rgba(255, 255, 255, 0.97) transparent;
+  top: -8px;
+  left: 30px;
+}
+/* Tail pointing right (bubble sits to the LEFT of its target) */
+.dialog-bubble.tail-right::before {
+  border-width: 8px 0 8px 12px;
+  border-color: transparent transparent transparent var(--accent);
+  right: -12px;
+  top: 50%;
+  margin-top: -8px;
+}
+.dialog-bubble.tail-right::after {
+  content: '';
+  position: absolute;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 6px 0 6px 9px;
+  border-color: transparent transparent transparent rgba(255, 255, 255, 0.97);
+  right: -8px;
+  top: 50%;
+  margin-top: -6px;
+}
+
+/* Bubble accent text */
+.dialog-bubble strong { color: #c89438; }
+
+/* ============================================================
+   CARD INSPECTOR MODAL — click a card on the board / in hand.
+   ============================================================ */
+.card-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.86);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+.card-modal-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  animation: card-modal-in 0.22s ease-out;
+}
+@keyframes card-modal-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.card-modal-content img {
+  max-height: 82vh;
+  max-width: 82vw;
+  width: auto;
+  height: auto;
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.9), 0 0 50px rgba(245, 200, 75, 0.25);
+}
+.card-modal-close {
+  background: var(--accent);
+  color: var(--bg-1);
+  border: none;
+  padding: 10px 32px;
+  font-size: 0.95em;
+  font-weight: 700;
+  border-radius: 9px;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 6px 18px rgba(245, 200, 75, 0.4);
+  transition: transform 0.12s ease;
+}
+.card-modal-close:hover { transform: translateY(-1px); }
+
+/* ============================================================
+   LORE POP — ◆+N rises above a questing character, then fades up.
+   ============================================================ */
+.lore-pop {
+  position: fixed;
+  z-index: 360;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  font-size: 2.4em;
+  font-weight: 800;
+  color: var(--accent);
+  text-shadow: 0 0 22px rgba(245, 200, 75, 0.85), 0 4px 14px rgba(0, 0, 0, 0.8);
+  opacity: 0;
+  animation: lore-pop-rise 1.8s ease-out forwards;
+  white-space: nowrap;
+}
+.lore-pop-diamond {
+  display: inline-block;
+  transform: rotate(45deg);
+  margin-right: 8px;
+  font-size: 0.85em;
+}
+@keyframes lore-pop-rise {
+  0%   { opacity: 0; transform: translate(-50%, -50%); }
+  25%  { opacity: 1; transform: translate(-50%, -50%); }
+  100% { opacity: 0; transform: translate(-50%, calc(-50% - 15px)); }
+}
+
+/* White arrow from a questing card to its lore diamond. */
+.lore-arrow {
+  position: fixed;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.0) 0%, rgba(255,255,255,0.95) 100%);
+  z-index: 355;
+  pointer-events: none;
+  transform-origin: 0 50%;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+  border-radius: 2px;
+  opacity: 0;
+  animation: lore-arrow-flash 1.8s ease-out forwards;
+}
+.lore-arrow::after {
+  content: '';
+  position: absolute;
+  right: -12px;
+  top: -8px;
+  width: 0;
+  height: 0;
+  border-left: 14px solid rgba(255, 255, 255, 0.95);
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.8));
+}
+@keyframes lore-arrow-flash {
+  0%   { opacity: 0; }
+  25%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ============================================================
+   PAGE CONTROLS (fixed bottom-right, sits above the intro overlay)
+   ============================================================ */
+.page-controls {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  width: 196px;
+  z-index: 511;
+  background: rgba(10, 14, 26, 0.92);
+  border: 1px solid rgba(245, 200, 75, 0.4);
+  border-radius: 9px;
+  padding: 5px 6px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.6);
+  /* 격리: body의 font-size 변경에 영향받지 않도록 자체 사이즈 고정 */
+  font-size: 13px;
+}
+.page-slider {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.page-slider:disabled { cursor: default; opacity: 0.65; }
+.page-info {
+  text-align: center;
+  font-size: 0.82em;
+  color: var(--text-mute);
+  line-height: 1.3;
+}
+.page-info #page-current { color: var(--accent); font-weight: 700; }
+.page-info-sep { opacity: 0.55; margin: 0 4px; }
+.page-info-label {
+  display: block;
+  font-size: 0.92em;
+  color: var(--text);
+  opacity: 0.85;
+  margin-top: 2px;
+}
+.page-btn-row {
+  display: flex;
+  gap: 6px;
+}
+.page-btn-row .page-btn {
+  flex: 1;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.72em;
+  cursor: pointer;
+  transition: transform 0.12s ease, opacity 0.18s ease, background 0.18s ease;
+}
+.page-btn-next {
+  background: var(--accent);
+  color: var(--bg-1);
+  box-shadow: 0 5px 14px rgba(245, 200, 75, 0.32);
+}
+.page-btn-next:hover { transform: translateY(-1px); }
+.page-btn-prev {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+.page-btn-prev:hover { background: rgba(255, 255, 255, 0.14); }
+.page-btn-row .page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+.page-toggles {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  font-size: 0.76em;
+  color: var(--text-mute);
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.page-toggles label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+.page-toggles input { cursor: pointer; accent-color: var(--accent); }
+
+.page-fontsize {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.78em;
+  color: var(--text-mute);
+}
+.page-fontsize .fs-label { letter-spacing: 0.04em; }
+.page-fontsize .fs-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  border-radius: 5px;
+  padding: 2px 9px;
+  font-size: 0.92em;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s ease;
+}
+.page-fontsize .fs-btn:hover { background: rgba(255, 255, 255, 0.18); }
+.page-fontsize .fs-display {
+  min-width: 22px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   SCENARIO OVERLAY (intro 페이지 위 검정 반투명 layer)
+   ============================================================ */
+.scenario-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 14, 0.86);
+  backdrop-filter: blur(6px);
+  z-index: 405;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+.scenario-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+.overlay-content {
+  position: relative;
+  width: min(1600px, 96vw);
+  height: min(720px, 86vh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  text-align: center;
+  transition: opacity 0.32s ease, transform 0.32s ease;
+}
+.overlay-content.fading {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+/* --- intro: title --- */
+.overlay-title-block {
+  max-width: 1000px;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.overlay-banner {
+  max-width: min(720px, 70vw);
+  max-height: 320px;
+  width: auto;
+  height: auto;
+  margin-bottom: 22px;
+  border-radius: 18px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.7), 0 0 40px rgba(245, 200, 75, 0.18);
+}
+.overlay-eyebrow {
+  font-size: 0.95em;
+  letter-spacing: 0.32em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  opacity: 0.85;
+}
+.overlay-title {
+  font-size: 3.4em;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  text-shadow: 0 4px 24px rgba(245, 200, 75, 0.35);
+  line-height: 1.18;
+  margin-bottom: 14px;
+}
+.overlay-subtitle {
+  font-size: 1.3em;
+  color: var(--text-mute);
+  letter-spacing: 0.1em;
+  margin-bottom: 20px;
+}
+.overlay-description {
+  font-size: 1.1em;
+  color: var(--text);
+  line-height: 1.7;
+  margin-bottom: 28px;
+  max-width: 1150px;
+}
+.overlay-description strong { color: var(--accent); }
+.overlay-description strong.hl {
+  background: rgba(245, 200, 75, 0.18);
+  border: 1px solid rgba(245, 200, 75, 0.55);
+  padding: 2px 10px;
+  border-radius: 6px;
+}
+.overlay-hint {
+  font-size: 0.9em;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  margin-top: 10px;
+}
+.overlay-hint kbd {
+  background: rgba(245, 200, 75, 0.18);
+  border: 1px solid rgba(245, 200, 75, 0.45);
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-size: 0.85em;
+  color: var(--accent);
+  font-family: inherit;
+  margin: 0 2px;
+}
+
+/* --- intro: section (world etc.) --- */
+.overlay-section { max-width: 1280px; padding: 0 24px; text-align: left; }
+.overlay-section-title {
+  font-size: 2.2em;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  text-align: center;
+  margin-bottom: 22px;
+  text-shadow: 0 0 18px rgba(245, 200, 75, 0.4);
+}
+.overlay-section p {
+  font-size: 1.15em;
+  line-height: 1.75;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+.overlay-section p strong { color: var(--accent); }
+
+/* --- intro: world (image + text side by side) --- */
+.overlay-world {
+  display: flex;
+  align-items: center;
+  gap: 56px;
+  max-width: 1440px;
+  padding: 0 24px;
+}
+.overlay-world-img {
+  width: min(420px, 36vw);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(245, 200, 75, 0.15);
+  flex-shrink: 0;
+}
+.overlay-world-text {
+  flex: 1;
+  text-align: left;
+}
+.overlay-world-text p {
+  font-size: 1.1em;
+  line-height: 1.75;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+.overlay-world-text p strong { color: var(--accent); }
+
+/* --- intro: ink colors (hex layout) --- */
+.overlay-ink-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+.ink-hex {
+  position: relative;
+  width: min(720px, 78vw);
+  height: min(520px, 60vh);
+  margin: 14px 0;
+}
+.ink-slot {
+  position: absolute;
+  width: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.ink-slot img {
+  width: 92px;
+  height: 92px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+}
+.ink-bubble {
+  background: rgba(10, 14, 26, 0.85);
+  border: 1px solid rgba(245, 200, 75, 0.35);
+  border-radius: 9px;
+  padding: 7px 12px;
+  font-size: 0.84em;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.35;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
+}
+.ink-bubble strong { color: var(--accent); display: block; margin-bottom: 3px; }
+/* 6각형 위치 — 위 2, 가운데 2, 아래 2 */
+.ink-amber    { top:  4%; left: 26%; transform: translateX(-50%); }
+.ink-amethyst { top:  4%; left: 74%; transform: translateX(-50%); }
+.ink-emerald  { top: 38%; left:  8%; transform: translateX(-50%); }
+.ink-ruby     { top: 38%; left: 92%; transform: translateX(-50%); }
+.ink-sapphire { top: 72%; left: 26%; transform: translateX(-50%); }
+.ink-steel    { top: 72%; left: 74%; transform: translateX(-50%); }
+
+.overlay-tagline {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  font-size: 1.25em;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 22px rgba(245, 200, 75, 0.55);
+  text-align: center;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* --- intro: ink rules --- */
+.ink-rules { text-align: center; max-width: 1100px; }
+.ink-rules-pair {
+  display: flex;
+  gap: 80px;
+  justify-content: center;
+  align-items: center;
+  margin: 24px 0 28px;
+}
+.ink-rule {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.ink-rule img {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.6));
+}
+.ink-rule-label {
+  font-size: 1.05em;
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.ink-rules p {
+  font-size: 1.05em;
+  line-height: 1.75;
+  color: var(--text);
+  margin-bottom: 8px;
+  text-align: center;
+}
+.ink-rules p strong { color: var(--accent); }
+.ink-rules p strong.hl {
+  background: rgba(245, 200, 75, 0.18);
+  border: 1px solid rgba(245, 200, 75, 0.55);
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 1.05em;
+}
+
+/* --- intro: challenge brief (3s loop demo) --- */
+.challenge-brief { text-align: center; max-width: 1300px; }
+.challenge-demo {
+  display: flex;
+  gap: 60px;
+  justify-content: center;
+  align-items: center;
+  margin: 26px 0 28px;
+}
+.ch-side {
+  position: relative;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.ch-card {
+  width: 200px;
+  aspect-ratio: 660 / 920;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.75);
+  transform-origin: center center;
+}
+/* Attacker rotates exerted as part of cycle. */
+.ch-attacker .ch-card { animation: ch-attacker-cycle 3s ease-in-out infinite; }
+/* Defender stays exerted (entered exerted via Bodyguard). */
+.ch-defender .ch-card-static { transform: rotate(90deg); filter: brightness(0.82) saturate(0.85); }
+@keyframes ch-attacker-cycle {
+  0%, 12%  { transform: rotate(0deg);  filter: brightness(1); }
+  25%, 92% { transform: rotate(90deg); filter: brightness(0.82) saturate(0.85); }
+  100%     { transform: rotate(0deg);  filter: brightness(1); }
+}
+/* Red flash on both cards during impact (40~60%). */
+.ch-flash {
+  position: absolute;
+  inset: 0;
+  width: 200px;
+  aspect-ratio: 660 / 920;
+  border-radius: 12px;
+  background: rgba(255, 30, 30, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  animation: ch-flash-cycle 3s ease-in-out infinite;
+  top: 0;
+}
+/* Both attacker(exerted at impact time) and defender(always exerted) flashes
+   are rotated 90° to match the rotated cards. */
+.ch-attacker .ch-flash,
+.ch-defender .ch-flash { transform: rotate(90deg); transform-origin: center center; }
+@keyframes ch-flash-cycle {
+  0%, 36%   { opacity: 0; }
+  44%, 56%  { opacity: 1; }
+  68%, 100% { opacity: 0; }
+}
+/* Damage counter pops on each card around 60% of the cycle. */
+.ch-dmg {
+  position: absolute;
+  top: calc(50% - 23px);
+  left: calc(50% - 23px);
+  width: 46px;
+  height: 46px;
+  background: linear-gradient(135deg, #e25557 0%, #b03234 100%);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.2em;
+  box-shadow: 0 4px 16px rgba(226, 85, 87, 0.7), 0 0 0 3px rgba(255, 255, 255, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  opacity: 0;
+  animation: ch-dmg-cycle 3s ease-out infinite;
+  z-index: 3;
+}
+@keyframes ch-dmg-cycle {
+  0%, 58%   { opacity: 0; transform: translateY(-12px); }
+  68%       { opacity: 1; transform: translateY(0); }
+  90%, 100% { opacity: 1; transform: translateY(0); }
+}
+/* Exerted attacker rotates the dmg counter; we counter-rotate so the number
+   stays upright. Apply rotate(-90deg) only during the exerted phase. */
+.ch-attacker .ch-dmg { animation-name: ch-dmg-cycle-attacker; }
+@keyframes ch-dmg-cycle-attacker {
+  0%, 58%   { opacity: 0; transform: translateY(-12px) rotate(-90deg); }
+  68%       { opacity: 1; transform: translateY(0) rotate(-90deg); }
+  90%, 100% { opacity: 1; transform: translateY(0) rotate(-90deg); }
+}
+/* Defender is also exerted throughout — counter-rotate too. */
+.ch-defender .ch-dmg { animation-name: ch-dmg-cycle-defender; }
+@keyframes ch-dmg-cycle-defender {
+  0%, 58%   { opacity: 0; transform: translateY(-12px) rotate(-90deg); }
+  68%       { opacity: 1; transform: translateY(0) rotate(-90deg); }
+  90%, 100% { opacity: 1; transform: translateY(0) rotate(-90deg); }
+}
+.ch-label {
+  margin-top: 8px;
+  font-size: 0.92em;
+  color: var(--text-mute);
+  letter-spacing: 0.04em;
+}
+.ch-arrow {
+  width: 60px;
+  height: 5px;
+  background: linear-gradient(90deg, rgba(255,80,80,0.0) 0%, rgba(255,50,50,1) 100%);
+  border-radius: 3px;
+  position: relative;
+  box-shadow: 0 0 12px rgba(255, 40, 40, 0.6);
+  align-self: center;
+  opacity: 0;
+  animation: ch-arrow-cycle 3s ease-in-out infinite;
+}
+.ch-arrow::after {
+  content: '';
+  position: absolute;
+  right: -12px;
+  top: -8px;
+  border-left: 16px solid #ff2828;
+  border-top: 9px solid transparent;
+  border-bottom: 9px solid transparent;
+  filter: drop-shadow(0 0 8px rgba(255, 40, 40, 0.7));
+}
+@keyframes ch-arrow-cycle {
+  0%, 18%  { opacity: 0; }
+  28%, 42% { opacity: 1; }
+  56%, 100%{ opacity: 0; }
+}
+.challenge-desc {
+  font-size: 1em;
+  line-height: 1.75;
+  color: var(--text);
+  text-align: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.challenge-desc strong { color: var(--accent); }
+.challenge-desc strong.hl {
+  background: rgba(245, 80, 80, 0.18);
+  border: 1px solid rgba(255, 80, 80, 0.55);
+  padding: 2px 10px;
+  border-radius: 6px;
+  color: #ff8080;
+}
+.challenge-desc em { color: var(--text-mute); font-style: normal; }
+
+/* --- intro: closing briefs (action / item / location / deck / thanks) --- */
+.closing-brief { text-align: center; max-width: 1200px; }
+.closing-card-row {
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  align-items: center;
+  margin: 22px 0 24px;
+}
+.closing-card-img {
+  width: 286px;  /* 1.3x */
+  aspect-ratio: 660 / 920;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.75);
+}
+/* Location card: 회전된 visual 사이즈와 동일한 wrapper(loc-frame)에 넣어
+   transform이 layout 밖으로 비집고 나오는 영역(상하 75px씩)을 흡수.
+   외부 row의 margin만 적용되어 다른 closing 페이지와 동일한 간격이 됨. */
+.loc-frame {
+  width: 510px;   /* 회전 후 visual width */
+  height: 360px;  /* 회전 후 visual height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.closing-card-img.location-card {
+  /* 회전 전 box: visual width/height을 swap한 값 */
+  width: 360px;
+  height: 510px;
+  aspect-ratio: auto;
+  object-fit: contain;
+  transform: rotate(90deg);
+  margin: 0;
+}
+.closing-desc {
+  font-size: 1.05em;
+  line-height: 1.75;
+  color: var(--text);
+  text-align: center;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.closing-desc strong { color: var(--accent); }
+.closing-desc strong.hl {
+  background: rgba(245, 200, 75, 0.18);
+  border: 1px solid rgba(245, 200, 75, 0.55);
+  padding: 2px 10px;
+  border-radius: 6px;
+}
+.closing-bullets {
+  list-style: none;
+  padding: 0;
+  margin: 16px auto 22px;
+  max-width: 720px;
+  text-align: left;
+  font-size: 1.08em;
+  line-height: 1.9;
+  color: var(--text);
+}
+.closing-bullets li {
+  padding-left: 28px;
+  position: relative;
+}
+.closing-bullets li::before {
+  content: '◆';
+  position: absolute;
+  left: 4px;
+  color: var(--accent);
+}
+.closing-bullets strong { color: var(--accent); }
+.closing-bullets strong.hl {
+  background: rgba(245, 200, 75, 0.18);
+  border: 1px solid rgba(245, 200, 75, 0.55);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* --- intro: sing brief --- */
+.sing-brief { text-align: center; max-width: 1400px; }
+.sing-pair {
+  display: flex;
+  gap: 50px;
+  justify-content: center;
+  align-items: flex-start;
+  margin: 22px 0 28px;
+}
+.sing-item {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.sing-stack {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.sing-singer { animation: sing-singer-cycle 3s ease-in-out infinite; transform-origin: center center; }
+@keyframes sing-singer-cycle {
+  0%, 22%  { transform: rotate(0deg);  filter: brightness(1); }
+  40%, 90% { transform: rotate(90deg); filter: brightness(0.82) saturate(0.85); }
+  100%     { transform: rotate(0deg);  filter: brightness(1); }
+}
+.sing-song {
+  animation: sing-song-cycle 3s ease-out infinite;
+  opacity: 0;
+}
+@keyframes sing-song-cycle {
+  0%, 30%  { opacity: 0; transform: translateY(12px); }
+  44%      { opacity: 1; transform: translateY(0); }
+  88%      { opacity: 1; transform: translateY(0); }
+  100%     { opacity: 0; transform: translateY(0); }
+}
+.shift-cost-5 .cost-ink-card:nth-child(5) { animation-delay: 0.60s; }
+.sing-sub { font-size: 0.85em; color: var(--text-mute); margin-top: -8px; }
+.sing-desc {
+  font-size: 1.05em;
+  line-height: 1.75;
+  color: var(--text);
+  text-align: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.sing-desc strong { color: var(--accent); }
+.sing-desc strong.hl {
+  background: rgba(245, 200, 75, 0.18);
+  border: 1px solid rgba(245, 200, 75, 0.55);
+  padding: 2px 10px;
+  border-radius: 6px;
+}
+
+/* --- intro: shift brief --- */
+.shift-brief { text-align: center; max-width: 1400px; }
+.shift-pair {
+  display: flex;
+  gap: 50px;
+  justify-content: center;
+  align-items: flex-start;
+  margin: 22px 0 28px;
+}
+.shift-item {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.shift-card-zone {
+  position: relative;
+  width: 200px;
+  height: 280px;
+}
+.shift-card-zone .cost-exert-card {
+  position: absolute;
+  width: 200px;
+  aspect-ratio: 660 / 920;
+  top: 0;
+  left: 0;
+}
+.shift-card-zone.stacked .shift-base {
+  top: 12px;
+  left: 12px;
+  filter: brightness(0.78);
+  /* base는 이미 자리에 있던 캐릭터 — 애니메이션 없음 */
+}
+.shift-card-zone.stacked .shift-top {
+  top: 0;
+  left: 0;
+  z-index: 2;
+}
+/* 일반 single 플레이 + shifted top 카드만 "플레이되어 등장하는" 애니메이션 */
+.shift-card-zone.single .cost-exert-card,
+.shift-card-zone.stacked .shift-top {
+  animation: shift-card-enter 3s ease-out infinite;
+}
+@keyframes shift-card-enter {
+  0%       { opacity: 0; transform: translateY(22px); }
+  20%      { opacity: 1; transform: translateY(0); }
+  78%      { opacity: 1; transform: translateY(0); }
+  100%     { opacity: 0; transform: translateY(0); }
+}
+
+/* 카드 그림자가 label 영역을 덮지 않도록 간격 확보 */
+.shift-brief .shift-item { gap: 18px; }
+.shift-brief .cost-exert-label { margin-top: 6px; }
+.shift-vs {
+  align-self: center;
+  font-size: 1.6em;
+  font-weight: 800;
+  color: var(--text-mute);
+  letter-spacing: 0.18em;
+  padding: 0 6px;
+  margin-top: 80px;
+}
+.shift-cost-6 .cost-ink-card:nth-child(5) { animation-delay: 0.60s; }
+.shift-cost-6 .cost-ink-card:nth-child(6) { animation-delay: 0.75s; }
+.shift-desc {
+  font-size: 1.05em;
+  line-height: 1.75;
+  color: var(--text);
+  text-align: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.shift-desc strong { color: var(--accent); }
+.shift-desc strong.hl {
+  background: rgba(245, 200, 75, 0.18);
+  border: 1px solid rgba(245, 200, 75, 0.55);
+  padding: 2px 10px;
+  border-radius: 6px;
+}
+
+/* --- intro: quest brief (3s loop demo) --- */
+.quest-brief { text-align: center; max-width: 1200px; }
+.quest-demo {
+  display: flex;
+  gap: 80px;
+  justify-content: center;
+  align-items: center;
+  margin: 26px 0 30px;
+}
+.quest-demo-card-zone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 220px;
+  height: 308px;
+}
+.quest-demo-card {
+  width: 220px;
+  aspect-ratio: 660 / 920;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.75);
+  transform-origin: center center;
+  animation: quest-demo-card-cycle 3s ease-in-out infinite;
+}
+@keyframes quest-demo-card-cycle {
+  0%, 16%  { transform: rotate(0deg);  filter: brightness(1) saturate(1); }
+  33%, 83% { transform: rotate(90deg); filter: brightness(0.82) saturate(0.85); }
+  100%     { transform: rotate(0deg);  filter: brightness(1) saturate(1); }
+}
+.quest-demo-pop {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, 0);
+  color: var(--accent);
+  font-size: 2em;
+  font-weight: 800;
+  text-shadow: 0 0 18px rgba(245, 200, 75, 0.85);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  animation: quest-demo-pop-cycle 3s ease-out infinite;
+}
+@keyframes quest-demo-pop-cycle {
+  0%, 33%  { opacity: 0; transform: translate(-50%, 0); }
+  40%      { opacity: 1; transform: translate(-50%, 0); }
+  66%      { opacity: 0; transform: translate(-50%, -28px); }
+  100%     { opacity: 0; transform: translate(-50%, -28px); }
+}
+.quest-demo-arrow {
+  width: 70px;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.0), rgba(255,255,255,0.95));
+  border-radius: 2px;
+  position: relative;
+  box-shadow: 0 0 10px rgba(255,255,255,0.6);
+  opacity: 0;
+  animation: quest-demo-arrow-cycle 3s ease-out infinite;
+}
+.quest-demo-arrow::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: -7px;
+  border-left: 12px solid rgba(255,255,255,0.95);
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  filter: drop-shadow(0 0 6px rgba(255,255,255,0.7));
+}
+@keyframes quest-demo-arrow-cycle {
+  0%, 38%  { opacity: 0; }
+  46%, 66% { opacity: 1; }
+  84%, 100%{ opacity: 0; }
+}
+.quest-demo-diamond {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  background: radial-gradient(circle at 30% 30%, rgba(245, 200, 75, 0.95) 0%, rgba(200, 148, 56, 0.78) 100%);
+  transform: rotate(45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 24px rgba(245, 200, 75, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+}
+.quest-num {
+  position: absolute;
+  font-size: 2.4em;
+  font-weight: 800;
+  color: #1a1340;
+  transform: rotate(-45deg);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+.quest-num-0 { animation: quest-num0-cycle 3s linear infinite; }
+.quest-num-1 { animation: quest-num1-cycle 3s linear infinite; opacity: 0; }
+@keyframes quest-num0-cycle {
+  0%, 38%  { opacity: 1; }
+  46%, 84% { opacity: 0; }
+  88%, 100%{ opacity: 1; }
+}
+@keyframes quest-num1-cycle {
+  0%, 38%  { opacity: 0; }
+  46%, 84% { opacity: 1; }
+  88%, 100%{ opacity: 0; }
+}
+.quest-desc {
+  font-size: 1.05em;
+  line-height: 1.75;
+  color: var(--text);
+  text-align: center;
+}
+.quest-desc strong { color: var(--accent); }
+.quest-desc strong.hl {
+  background: rgba(245, 200, 75, 0.18);
+  border: 1px solid rgba(245, 200, 75, 0.55);
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+
+/* --- intro: cost exert (ink payment) --- */
+.cost-exert { text-align: center; max-width: 1300px; }
+.cost-exert-desc {
+  font-size: 1.1em;
+  line-height: 1.65;
+  margin-bottom: 28px;
+}
+.cost-exert-desc strong { color: var(--accent); }
+.cost-exert-grid {
+  display: flex;
+  gap: 120px;
+  justify-content: center;
+  align-items: flex-start;
+  margin-top: 12px;
+}
+.cost-exert-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.cost-exert-card {
+  width: 180px;
+  aspect-ratio: 660 / 920;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.75);
+}
+.cost-exert-label {
+  font-size: 0.95em;
+  color: var(--text);
+  letter-spacing: 0.06em;
+}
+.cost-exert-label strong {
+  color: var(--accent);
+  font-size: 1.15em;
+  margin-left: 4px;
+}
+.cost-inkwell {
+  display: flex;
+  align-items: center;
+  height: 96px;
+  margin-top: 6px;
+  perspective: 600px;
+}
+.cost-ink-card {
+  width: 60px;
+  height: 84px;
+  border-radius: 5px;
+  background: var(--card-back-url) center/cover no-repeat;
+  border: 1px solid rgba(245, 200, 75, 0.25);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  margin-left: -28px;
+  transform: rotate(0deg);
+  animation: cost-ink-cycle 3s ease-in-out infinite;
+}
+.cost-ink-card:first-child { margin-left: 0; }
+.cost-ink-card:nth-child(2) { animation-delay: 0.15s; }
+.cost-ink-card:nth-child(3) { animation-delay: 0.30s; }
+.cost-ink-card:nth-child(4) { animation-delay: 0.45s; }
+@keyframes cost-ink-cycle {
+  0%, 22%   { transform: rotate(0deg);  filter: brightness(1) saturate(1); }
+  42%, 78%  { transform: rotate(90deg); filter: brightness(0.7) saturate(0.7); }
+  100%      { transform: rotate(0deg);  filter: brightness(1) saturate(1); }
+}
+
+/* --- intro: ready / exert --- */
+.ready-exert { text-align: center; }
+.ready-exert-pair {
+  display: flex;
+  gap: 180px; /* exerted 카드가 가로로 누우면서 시각 폭이 늘어나므로 충분히 띄움 */
+  justify-content: center;
+  align-items: center;
+  margin: 30px 0;
+}
+.re-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.re-card {
+  width: 220px;
+  aspect-ratio: 660 / 920;
+  object-fit: cover;
+  border-radius: 14px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.75);
+  transition: transform 0.6s ease;
+}
+.re-card.re-exerted {
+  transform: rotate(90deg);
+  margin: 0 calc((100% - 220px) / 2);
+  filter: brightness(0.82) saturate(0.85);
+}
+.re-label {
+  font-size: 1em;
+  line-height: 1.4;
+  color: var(--text);
+}
+.re-label strong { color: var(--accent); }
+.ready-exert-desc {
+  font-size: 1.05em;
+  line-height: 1.7;
+  color: var(--text);
+  max-width: 1100px;
+  margin: 18px auto 0;
+}
+.ready-exert-desc strong { color: var(--accent); }
+
+/* --- intro: card anatomy --- */
+.card-anatomy {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card-anatomy-img {
+  height: min(620px, 78vh);
+  aspect-ratio: 660 / 920;  /* Lorcana 카드 표준 비율 — 로드 전에도 박스 확정 */
+  width: auto;
+  object-fit: cover;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 50px rgba(245, 200, 75, 0.18);
+  display: block;
+  background: rgba(0, 0, 0, 0.5);
+}
+.callout {
+  position: absolute;
+  background: linear-gradient(180deg, rgba(255, 250, 235, 0.98), rgba(244, 230, 200, 0.95));
+  color: #1a1340;
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 0.92em;
+  font-weight: 600;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6), 0 0 18px rgba(245, 200, 75, 0.35);
+  max-width: 220px;
+  line-height: 1.4;
+}
+.callout strong { color: #b86c00; }
+.callout::before {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: inherit;
+  border: 2px solid var(--accent);
+  transform: rotate(45deg);
+}
+/* Callout positions — relative to the centered card.
+   Card box width ≈ 78vh * 0.717 ≈ 444px at 1080p. Half ≈ 222px. */
+.callout.c-cost          { top: 6%;  right: calc(50% + 252px); }
+.callout.c-cost::before          { right: -10px; top: 50%; margin-top: -7px; border-top: 0; border-left: 0; }
+.callout.c-name-version  { top: calc(42% + 20px); right: calc(50% + 252px); max-width: 240px; }
+.callout.c-name-version::before  { right: -10px; top: 50%; margin-top: -7px; border-top: 0; border-left: 0; }
+.callout.c-stats         { top: calc(42% + 20px); left: calc(50% + 252px); max-width: 270px; }
+.callout.c-stats::before         { left: -10px; top: 50%; margin-top: -7px; border-bottom: 0; border-right: 0; }
+.callout.c-lore          { bottom: calc(14% + 5px); left: calc(50% + 252px); }
+.callout.c-lore::before          { left: -10px; top: 50%; margin-top: -7px; border-bottom: 0; border-right: 0; }
+.callout small { display: block; color: #555; font-weight: 500; font-size: 0.85em; margin-top: 2px; }
+
+/* ============================================================
+   BEGIN PHASE — trigger button, badge, draw flyer
+   ============================================================ */
+.phase-controls {
+  position: fixed;
+  top: 56px;
+  right: 18px;
+  z-index: 510;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+.phase-btn-secondary {
+  background: rgba(245, 200, 75, 0.14);
+  color: var(--accent);
+  border: 1px solid rgba(245, 200, 75, 0.40);
+  box-shadow: none;
+}
+.phase-btn-secondary:hover {
+  background: rgba(245, 200, 75, 0.24);
+  box-shadow: 0 6px 14px rgba(245, 200, 75, 0.18);
+}
+.phase-btn-undo {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-mute);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+  font-size: 0.72em;
+  padding: 6px 14px;
+  font-weight: 600;
+}
+.phase-btn-undo:hover {
+  background: rgba(255, 255, 255, 0.13);
+  color: var(--text);
+}
+.phase-btn-undo:disabled {
+  opacity: 0.35;
+}
+.phase-btn {
+  background: var(--accent);
+  color: var(--bg-1);
+  border: none;
+  border-radius: 22px;
+  padding: 9px 18px;
+  font-size: 0.82em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(245, 200, 75, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.2s ease;
+  font-family: inherit;
+}
+.phase-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(245, 200, 75, 0.5);
+}
+.phase-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.phase-badge {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.85);
+  font-family: inherit;
+  font-size: 5em;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+  text-shadow:
+    0 0 30px rgba(245, 200, 75, 0.65),
+    0 0 60px rgba(245, 200, 75, 0.35);
+  pointer-events: none;
+  z-index: 600;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.35s cubic-bezier(0.34, 1.5, 0.64, 1);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.phase-badge.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* Draw flyer — flying card from deck to hand.
+   Lives inside .self-hand-fan so it inherits the fan's stacking context
+   (z-index 100, below subtitle z-index 400) and shares coordinate frame. */
+.draw-flyer {
+  position: absolute;
+  pointer-events: none;
+  perspective: 1200px;
+  transform-origin: 50% 100%; /* match hand-card pivot for fan rotation */
+  transition: left   0.95s cubic-bezier(0.45, 0, 0.55, 1),
+              top    0.95s cubic-bezier(0.45, 0, 0.55, 1),
+              width  0.95s cubic-bezier(0.45, 0, 0.55, 1),
+              height 0.95s cubic-bezier(0.45, 0, 0.55, 1),
+              transform 0.95s cubic-bezier(0.45, 0, 0.55, 1);
+}
+.flyer-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+.flyer-inner.peeking {
+  animation: flyer-peek 0.95s ease-in-out forwards;
+}
+@keyframes flyer-peek {
+  0%   { transform: rotateY(0deg); }
+  100% { transform: rotateY(180deg); }
+}
+.flyer-back,
+.flyer-front {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--card-radius);
+  backface-visibility: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(245, 200, 75, 0.3);
+}
+.flyer-back {
+  background: var(--card-back-url) center/cover no-repeat;
+  border: 1px solid rgba(245, 200, 75, 0.25);
+}
+.flyer-front {
+  transform: rotateY(180deg);
+  background: rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.flyer-front .flyer-face {
+  width: 100%;
+  height: 100%;
+  background: var(--card-back-url) center/cover no-repeat;
+}
+
+/* Incoming hand-card: invisible while flyer is mid-flight,
+   then becomes visible the instant flyer is removed. */
+.self-hand-fan .hand-card.incoming {
+  opacity: 0;
+}
+
+/* Opponent draw — flyer slides up off-screen toward where the (invisible)
+   opp hand-fan would sit: horizontally centered, just above the viewport.
+   No opacity fade — once it clears the viewport it's gone naturally. */
+.draw-flyer.opp-draw {
+  position: fixed;
+  z-index: 200;
+  transition: left 0.9s cubic-bezier(0.45, 0, 0.55, 1),
+              top  0.9s cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+/* Ink-add flyer — reveal card face-up at table center, then flip face-down
+   and slide into the rightmost inkwell slot. The flyer's box size is sized to
+   the card image's natural aspect ratio (computed at runtime) so no frame /
+   letterbox is needed — both faces fill the box exactly. */
+.ink-add-flyer {
+  position: fixed;
+  z-index: 250;
+  pointer-events: none;
+  perspective: 1200px;
+  transition: left   0.85s cubic-bezier(0.45, 0, 0.55, 1),
+              top    0.85s cubic-bezier(0.45, 0, 0.55, 1),
+              width  0.85s cubic-bezier(0.45, 0, 0.55, 1),
+              height 0.85s cubic-bezier(0.45, 0, 0.55, 1);
+}
+.ink-flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.85s ease-in-out;
+}
+.ink-flip-inner.flipped {
+  transform: rotateY(180deg);
+}
+.ink-flip-front, .ink-flip-back {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--card-radius);
+  backface-visibility: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(245, 200, 75, 0.3);
+}
+.ink-flip-front {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ink-flip-back {
+  background: var(--card-back-url) center/cover no-repeat;
+  transform: rotateY(180deg);
+  border: 1px solid rgba(245, 200, 75, 0.25);
+}
+
+/* Challenge arrow — red line from attacker to defender, with arrowhead. */
+.challenge-arrow {
+  position: fixed;
+  height: 5px;
+  background: linear-gradient(90deg,
+    rgba(255, 80, 80, 0.15) 0%,
+    rgba(255, 50, 50, 0.95) 70%,
+    rgba(255, 30, 30, 1) 100%);
+  border-radius: 3px;
+  z-index: 350;
+  pointer-events: none;
+  transform-origin: 0 50%;
+  box-shadow: 0 0 14px rgba(255, 40, 40, 0.65);
+  transition: opacity 0.35s ease;
+}
+.challenge-arrow::after {
+  content: '';
+  position: absolute;
+  right: -14px;
+  top: -11px;
+  width: 0; height: 0;
+  border-left: 22px solid #ff2828;
+  border-top:  13px solid transparent;
+  border-bottom: 13px solid transparent;
+  filter: drop-shadow(0 0 10px rgba(255, 40, 40, 0.85));
+}
+.challenge-arrow.fade-out { opacity: 0; }
+
+/* Card hit — shake + red flash overlay. Base transform is set as a CSS
+   variable so exerted cards stay rotated 90deg while shaking. */
+.card.hit {
+  animation: card-shake 0.5s ease-in-out;
+}
+.card.hit.exerted {
+  --base-tx: rotate(90deg);
+}
+.card.hit:not(.exerted) {
+  --base-tx: none;
+}
+/* 6 steps over the same 0.5s duration = ~20% faster oscillation. */
+@keyframes card-shake {
+  0%, 100% { transform: var(--base-tx, none) translate(0, 0); }
+  16%  { transform: var(--base-tx, none) translate(-5px, 3px); }
+  33%  { transform: var(--base-tx, none) translate(5px, -3px); }
+  50%  { transform: var(--base-tx, none) translate(-4px, 3px); }
+  66%  { transform: var(--base-tx, none) translate(4px, -2px); }
+  83%  { transform: var(--base-tx, none) translate(-3px, 2px); }
+}
+.card.hit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 30, 30, 0.45);
+  border-radius: var(--card-radius);
+  pointer-events: none;
+  z-index: 4;
+  animation: red-flash 0.5s ease-out;
+}
+@keyframes red-flash {
+  0%   { opacity: 0; }
+  30%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Play flyer — generic card moving from hand to a play slot (used by shift) */
+.play-flyer {
+  position: fixed;
+  z-index: 250;
+  pointer-events: none;
+  border-radius: var(--card-radius);
+  overflow: hidden;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.7), 0 0 32px rgba(245, 200, 75, 0.35);
+  transition: left      0.85s cubic-bezier(0.45, 0, 0.55, 1),
+              top       0.85s cubic-bezier(0.45, 0, 0.55, 1),
+              width     0.85s cubic-bezier(0.45, 0, 0.55, 1),
+              height    0.85s cubic-bezier(0.45, 0, 0.55, 1),
+              transform 0.85s cubic-bezier(0.45, 0, 0.55, 1);
+}
+.play-flyer img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
