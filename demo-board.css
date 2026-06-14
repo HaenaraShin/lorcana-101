@@ -111,7 +111,7 @@ body::before {
   width: 100vw;
   height: 100vh;
   display: grid;
-  grid-template-columns: 1fr 110px;
+  grid-template-columns: 1fr 196px;
   gap: 6px;
   padding: 14px 18px;
 }
@@ -295,7 +295,8 @@ body::before {
   margin: 6px 0;
   position: relative;
   flex-shrink: 0;
-  z-index: 0;
+  /* z-index 제거: 부모에 stacking context 두면 자식 divider-mark 의 z-index 가 외부 hover 카드(z-index 200) 와 비교될 때 갇혀 항상 카드 위로 떠오름.
+     divider-mark 만 자기 z-index 로 처리 → 정상 카드는 가리되 hover 확대 카드(200) 아래로 떨어짐. */
 }
 .divider-mark {
   position: absolute;
@@ -306,6 +307,8 @@ body::before {
   color: var(--accent);
   font-size: 1.2em;
   text-shadow: 0 0 10px rgba(245, 200, 75, 0.5);
+  /* z-index 1: player-side 배경(auto/0) 위로 띄움. card(2) 보다는 아래. */
+  z-index: 1;
 }
 
 /* ============================================================
@@ -317,6 +320,9 @@ body::before {
   border-radius: var(--card-radius);
   position: relative;
   flex-shrink: 0;
+  /* z-index 2: divider-mark(1) 보다 위, hover 카드(200) 아래.
+     player-side 배경(z-index auto)/divider-mark(1) 두 요소를 모두 카드 아래로 깔기 위함. */
+  z-index: 2;
   transition: transform 0.55s cubic-bezier(0.34, 1.2, 0.64, 1),
               margin 0.55s cubic-bezier(0.34, 1.2, 0.64, 1),
               box-shadow 0.2s ease,
@@ -469,12 +475,99 @@ body::before {
 }
 
 /* ============================================================
-   RIGHT LORE COLUMN — diamonds gathered near divider, mild gap
+   RIGHT LORE COLUMN — chapter rail + diamonds + page controls
    ============================================================ */
 .lore-column {
+  position: relative; /* chapter-rail absolute 기준 */
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+/* ----- Chapter rail — lore-column 우측 가장자리에 absolute (다이아몬드 정렬 보존) ----- */
+.chapter-rail {
+  position: absolute;
+  top: 4px;
+  right: 0;
+  width: 24px;
+  padding: 4px 0;
+  flex-shrink: 0;
+  z-index: 5;
+}
+.chapter-track {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  cursor: pointer;
+  touch-action: none;
+}
+.chapter-track-line {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 6px; bottom: 6px;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 1px;
+  pointer-events: none;
+}
+.chapter-dot {
+  position: absolute;
+  left: 50%;
+  width: 6px; height: 6px;
+  margin-left: -3px;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 50%;
+  pointer-events: none;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.chapter-dot.active {
+  background: var(--accent);
+  transform: scale(1.3);
+}
+.chapter-thumb {
+  position: absolute;
+  left: 50%;
+  width: 14px; height: 14px;
+  margin-left: -7px;
+  background: var(--accent);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(245, 200, 75, 0.45);
+  pointer-events: none;
+  transition: top 0.18s ease;
+}
+.chapter-rail.dragging .chapter-thumb {
+  transition: none;
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(245, 200, 75, 0.7);
+}
+.chapter-popup {
+  position: absolute;
+  right: calc(100% - 4px);
+  padding: 6px 14px;
+  background: rgba(245, 200, 75, 0.96);
+  color: var(--bg-1);
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity 0.15s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+.chapter-popup.visible { opacity: 1; }
+.chapter-popup::after {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+  border-left-color: rgba(245, 200, 75, 0.96);
 }
 .lore-block {
   display: flex;
@@ -758,7 +851,6 @@ body::before {
 }
 .lore-pop-diamond {
   display: inline-block;
-  transform: rotate(45deg);
   margin-right: 8px;
   font-size: 0.85em;
 }
@@ -800,23 +892,24 @@ body::before {
 }
 
 /* ============================================================
-   PAGE CONTROLS (fixed bottom-right, sits above the intro overlay)
+   PAGE CONTROLS — .self-lore-block 안 layout flow로 배치
+   (우측 컬럼 하단, self lore diamond 아래)
    ============================================================ */
+.self-lore-block .page-controls {
+  margin-top: auto;
+  width: 100%;
+  margin-bottom: 0;
+}
 .page-controls {
-  position: fixed;
-  right: 14px;
-  bottom: 14px;
-  width: 196px;
-  z-index: 511;
-  background: rgba(10, 14, 26, 0.92);
-  border: 1px solid rgba(245, 200, 75, 0.4);
+  background: rgba(10, 14, 26, 0.86);
+  border: 1px solid rgba(245, 200, 75, 0.35);
   border-radius: 9px;
   padding: 5px 6px 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   backdrop-filter: blur(10px);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
   /* 격리: body의 font-size 변경에 영향받지 않도록 자체 사이즈 고정 */
   font-size: 13px;
 }
@@ -826,6 +919,22 @@ body::before {
   cursor: pointer;
 }
 .page-slider:disabled { cursor: default; opacity: 0.65; }
+
+/* ----- Fast mode — 챕터 점프 중에는 모든 전환/애니메이션을 즉시 종료 ----- */
+body.fast-mode *,
+body.fast-mode *::before,
+body.fast-mode *::after {
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
+}
+
+/* ----- Edge pull — 화면 좌/우 가장자리를 잡아당기는 동작 중 텍스트 선택 방지 ----- */
+body.edge-pulling {
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grabbing;
+}
 .page-info {
   text-align: center;
   font-size: 0.82em;
@@ -1732,6 +1841,227 @@ body::before {
 }
 
 /* --- intro: ready / exert --- */
+/* ----- Begin phase brief (READY / SET / DRAW) ----- */
+.begin-brief { text-align: center; }
+.overlay-section-sub {
+  font-size: 1.05em;
+  color: var(--text-mute);
+  margin: 4px 0 28px;
+}
+.begin-phases {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 22px;
+  align-items: stretch;
+}
+.begin-phase {
+  position: relative;
+  padding: 22px 18px 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(245, 200, 75, 0.25);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.begin-phase h3 {
+  font-size: 1.4em;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin: 0;
+}
+.begin-phase p {
+  font-size: 0.95em;
+  line-height: 1.5;
+  color: var(--text);
+  margin: 0;
+}
+.phase-step {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--bg-1);
+  font-weight: 700;
+  font-size: 0.95em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.begin-ready-demo {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 28px;
+  margin-top: 10px;
+  min-height: 110px;
+}
+.ready-demo-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+/* 캐릭터·잉크 모두 동일 keyframe 으로 동기화하여 한 박자에 ready 됨 */
+.ready-demo-char,
+.ready-demo-ink {
+  transform-origin: 50% 50%;
+  animation: begin-ready-cycle 2.6s ease-in-out infinite;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
+}
+.ready-demo-char {
+  width: 56px;
+  aspect-ratio: 660 / 920;
+  background-size: cover;
+  background-position: center;
+}
+.ready-demo-ink {
+  width: 38px;
+  height: 56px;
+  background: var(--card-back-url) center/cover no-repeat;
+}
+.ready-demo-tag {
+  font-size: 0.78em;
+  color: var(--text-mute);
+  letter-spacing: 0.04em;
+}
+@keyframes begin-ready-cycle {
+  0%, 35%   { transform: rotate(90deg); filter: brightness(0.65) saturate(0.7); }
+  60%, 100% { transform: rotate(0deg);  filter: brightness(1)    saturate(1); }
+}
+.begin-ready-note,
+.begin-draw-note {
+  margin-top: 12px;
+}
+.begin-card-example {
+  width: 168px;
+  aspect-ratio: 660 / 920;
+  object-fit: cover;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7);
+  margin-top: 4px;
+}
+.begin-card-glow {
+  animation: begin-card-shimmer 2.4s ease-in-out infinite;
+}
+@keyframes begin-card-shimmer {
+  0%, 100% {
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7),
+                0 0 0 0 rgba(245, 200, 75, 0);
+  }
+  50% {
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.7),
+                0 0 18px 3px rgba(245, 200, 75, 0.55);
+  }
+}
+.begin-card-caption {
+  font-size: 0.82em;
+  color: var(--text-mute);
+  line-height: 1.45;
+}
+.begin-card-caption strong { color: var(--accent); }
+.begin-card-caption em { color: var(--accent); font-style: normal; }
+.begin-draw-demo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 8px;
+  height: 110px;
+}
+.begin-deck, .begin-draw-card {
+  width: 74px;
+  height: 104px;
+  border-radius: 8px;
+  position: relative;
+}
+.begin-deck .card-back, .begin-draw-card .card-back {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+.begin-draw-card {
+  animation: begin-draw-fly 2.4s ease-in-out infinite;
+}
+@keyframes begin-draw-fly {
+  0%   { transform: translate(-110px, 0) scale(0.95); opacity: 0; }
+  20%  { transform: translate(-110px, 0) scale(0.95); opacity: 0; }
+  45%  { transform: translate(0, 0) scale(1);         opacity: 1; }
+  85%  { transform: translate(0, 0) scale(1);         opacity: 1; }
+  100% { transform: translate(0, -10px) scale(1);     opacity: 0; }
+}
+
+/* ----- Game start: 주사위 + 라벨 + 말풍선 -----
+   상하 배치 — 보드 배치(Player B 위 / Player A 아래)와 시각적 일치. */
+.game-start-dice-wrap {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9000;
+  transition: opacity 0.4s ease;
+}
+.game-start-dice-wrap.fade-out { opacity: 0; }
+.dice-col {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.dice-col.opp  { top: 14vh; }
+.dice-col.self { bottom: 14vh; }
+.dice-col.self { flex-direction: column-reverse; } /* 라벨이 박스 아래로 가도록 — 보드 방향 일치 */
+.dice-label {
+  font-size: 1.15em;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+}
+.dice-box {
+  width: 120px;
+  height: 120px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fefefe 0%, #d7d9e0 100%);
+  color: #1a1a1a;
+  font-size: 4.4em;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.55), inset 0 -4px 0 rgba(0, 0, 0, 0.12);
+  /* 굴리는 동안 살짝 흔들림 */
+  animation: dice-shake 0.18s ease-in-out infinite;
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+.dice-box.settled {
+  animation: none;
+  transform: scale(1.05);
+}
+.dice-box.winner {
+  box-shadow:
+    0 16px 38px rgba(0, 0, 0, 0.55),
+    0 0 28px 4px rgba(245, 200, 75, 0.7),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.12);
+}
+@keyframes dice-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25%      { transform: translate(-2px, 1px) rotate(-2deg); }
+  50%      { transform: translate(2px, -1px) rotate(2deg); }
+  75%      { transform: translate(-1px, 2px) rotate(-1deg); }
+}
+.game-start-bubble {
+  transition: opacity 0.35s ease;
+}
+.game-start-bubble.fade-out { opacity: 0; }
+
 .ready-exert { text-align: center; }
 .ready-exert-pair {
   display: flex;
@@ -1901,9 +2231,21 @@ body::before {
   font-weight: 800;
   letter-spacing: 0.22em;
   color: var(--accent);
+  /* 카드 위 가독성: accent glow + 검은 외곽 4방향 + drop shadow 로 글자 분리 */
   text-shadow:
     0 0 30px rgba(245, 200, 75, 0.65),
-    0 0 60px rgba(245, 200, 75, 0.35);
+    0 0 60px rgba(245, 200, 75, 0.35),
+    -1.5px -1.5px 0 rgba(0, 0, 0, 0.9),
+    1.5px -1.5px 0 rgba(0, 0, 0, 0.9),
+    -1.5px  1.5px 0 rgba(0, 0, 0, 0.9),
+    1.5px  1.5px 0 rgba(0, 0, 0, 0.9),
+    0 4px 18px rgba(0, 0, 0, 0.85);
+  padding: 22px 56px;
+  /* 글자 주변에만 살짝 어두운 radial 음영 — 카드 패턴이 비쳐도 글자가 떠오름 */
+  background: radial-gradient(ellipse at center,
+              rgba(0, 0, 0, 0.55) 0%,
+              rgba(0, 0, 0, 0.25) 55%,
+              rgba(0, 0, 0, 0) 80%);
   pointer-events: none;
   z-index: 600;
   opacity: 0;
@@ -1914,6 +2256,292 @@ body::before {
 .phase-badge.show {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
+}
+
+/* ============================================================
+   FINALE — clock SVG overlay + VICTORY badge + winner glow.
+   ============================================================ */
+/* Finale excuse intro (overlay title 위에 얹는 강조 스타일). */
+.finale-excuse-title { font-size: 3.4em; letter-spacing: 0.04em; }
+.finale-excuse-sub   { font-size: 1.4em; margin-top: 18px; color: var(--text); }
+.finale-excuse-sub strong { color: var(--accent); }
+
+/* 시계 SVG fullscreen overlay (보드 위에 떠 회전). */
+.finale-clock-wrap {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(8, 10, 22, 0.92) 0%, rgba(0, 0, 0, 0.96) 80%);
+  z-index: 7500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  opacity: 0;
+  animation: finale-clock-fadein 0.45s ease forwards;
+  transition: opacity 0.45s ease;
+}
+.finale-clock-wrap.fade-out { opacity: 0; }
+@keyframes finale-clock-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.finale-clock-svg {
+  width: 280px;
+  height: 280px;
+  filter: drop-shadow(0 0 28px rgba(245, 200, 75, 0.55));
+}
+.finale-clock-svg .cl-face   { fill: rgba(20, 22, 38, 0.85); stroke: var(--accent); stroke-width: 3; }
+.finale-clock-svg .cl-center { fill: var(--accent); }
+.finale-clock-svg .cl-ticks line { stroke: var(--accent); stroke-width: 2.5; stroke-linecap: round; opacity: 0.85; }
+.finale-clock-svg .cl-hand {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transform-origin: 100px 100px;
+}
+.finale-clock-svg .cl-hour { stroke-width: 5.5; animation: finale-clock-spin 2.2s cubic-bezier(0.4, 0, 0.6, 1) forwards; }
+.finale-clock-svg .cl-min  { stroke-width: 3.5; animation: finale-clock-spin-fast 2.2s cubic-bezier(0.4, 0, 0.6, 1) forwards; }
+@keyframes finale-clock-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(1080deg); } /* 3바퀴 — 시침 */
+}
+@keyframes finale-clock-spin-fast {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(8640deg); } /* 24바퀴 — 분침: 시침 12배 */
+}
+.finale-clock-caption {
+  font-size: 1.6em;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  text-shadow: 0 0 18px rgba(245, 200, 75, 0.6);
+}
+
+/* Lore 카운터 황금 펄스 — 20점 임팩트.
+   .lore-num 자체가 rotate(-45deg) 인 상태(부모 .lore-diamond 의 +45 상쇄)이므로
+   keyframe 에서 반드시 rotate(-45deg) 를 유지해야 글자가 정상 방향으로 펄스함. */
+.lore-victory-pulse {
+  animation: lore-victory-pulse 1.4s ease-in-out infinite;
+  color: var(--accent) !important;
+  text-shadow:
+    0 0 18px rgba(245, 200, 75, 0.9),
+    0 0 38px rgba(245, 200, 75, 0.55);
+}
+@keyframes lore-victory-pulse {
+  0%, 100% { transform: rotate(-45deg) scale(1);    filter: brightness(1); }
+  50%      { transform: rotate(-45deg) scale(1.18); filter: brightness(1.5); }
+}
+
+/* 승자 카드 황금 외곽 글로우 — exerted 카드(rotate 90deg)의 transform 보존 위해
+   카드 자체에는 transform 적용하지 않고 ::after 의 box-shadow 만 사용. */
+.victory-card-glow {
+  position: relative;
+}
+.victory-card-glow::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 14px;
+  pointer-events: none;
+  box-shadow:
+    0 0 22px 6px rgba(245, 200, 75, 0.7),
+    0 0 48px 14px rgba(245, 200, 75, 0.35);
+  animation: victory-card-pulse 1.4s ease-in-out infinite;
+}
+@keyframes victory-card-pulse {
+  0%, 100% { opacity: 0.85; box-shadow: 0 0 22px 6px rgba(245, 200, 75, 0.7), 0 0 48px 14px rgba(245, 200, 75, 0.35); }
+  50%      { opacity: 1;    box-shadow: 0 0 30px 8px rgba(245, 200, 75, 0.85), 0 0 68px 22px rgba(245, 200, 75, 0.5); }
+}
+
+/* 승리 모드 — 보드 카드의 hover/zoom/click 차단. intro 슬라이드처럼 정적인 화면. */
+body.victory-mode .card,
+body.victory-mode .card.exerted {
+  pointer-events: none;
+  cursor: default;
+}
+
+/* 풀스크린 VICTORY 배지. */
+.victory-badge {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  pointer-events: none;
+  z-index: 9500;
+  background: radial-gradient(ellipse at center,
+              rgba(245, 200, 75, 0.18) 0%,
+              rgba(0, 0, 0, 0.55) 55%,
+              rgba(0, 0, 0, 0.85) 100%);
+  opacity: 0;
+  animation: victory-badge-in 0.6s cubic-bezier(0.2, 1.2, 0.4, 1) forwards;
+}
+@keyframes victory-badge-in {
+  from { opacity: 0; backdrop-filter: blur(0px); }
+  to   { opacity: 1; backdrop-filter: blur(2px); }
+}
+.victory-icon {
+  font-size: 6.5em;
+  animation: victory-trophy-pop 1.6s ease-out forwards;
+  filter: drop-shadow(0 0 28px rgba(245, 200, 75, 0.7));
+}
+@keyframes victory-trophy-pop {
+  0%   { transform: scale(0.3) rotate(-12deg); opacity: 0; }
+  50%  { transform: scale(1.15) rotate(4deg);  opacity: 1; }
+  100% { transform: scale(1)    rotate(0deg);  opacity: 1; }
+}
+.victory-text {
+  font-size: 7em;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+  text-shadow:
+    0 0 36px rgba(245, 200, 75, 0.85),
+    0 0 80px rgba(245, 200, 75, 0.55),
+    -2px -2px 0 rgba(0, 0, 0, 0.9),
+    2px -2px 0 rgba(0, 0, 0, 0.9),
+    -2px 2px 0 rgba(0, 0, 0, 0.9),
+    2px 2px 0 rgba(0, 0, 0, 0.9);
+  animation: victory-text-rise 0.8s cubic-bezier(0.34, 1.5, 0.64, 1) forwards;
+}
+@keyframes victory-text-rise {
+  from { opacity: 0; transform: translateY(28px) scale(0.85); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+.victory-sub {
+  font-size: 1.45em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  text-shadow: 0 0 12px rgba(0, 0, 0, 0.9);
+  opacity: 0;
+  animation: victory-sub-in 0.6s 0.7s ease-out forwards;
+}
+@keyframes victory-sub-in {
+  to { opacity: 1; }
+}
+
+/* Victory rule 슬라이드 — closing-brief 베이스에 강조 줄 추가. */
+.victory-rule-headline {
+  font-size: 1.35em;
+  text-align: center;
+  margin-bottom: 22px;
+}
+/* ----- victory-rule 슬라이드 내부 애니메이션 ----- */
+.vr-anim {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 38px;
+  margin: 14px auto 28px;
+  height: 200px;
+  position: relative;
+}
+.vr-card-wrap {
+  position: relative;
+  width: 120px;
+  height: 168px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vr-card {
+  width: 120px;
+  aspect-ratio: 660 / 920;
+  border-radius: 10px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.7);
+  transform-origin: 50% 50%;
+  animation: vr-card-quest 4.4s ease-in-out infinite;
+}
+@keyframes vr-card-quest {
+  0%, 20%   { transform: rotate(0deg);  filter: brightness(1); }
+  35%, 70%  { transform: rotate(90deg); filter: brightness(0.85); }
+  85%, 100% { transform: rotate(0deg);  filter: brightness(1); }
+}
+.vr-lore-pop {
+  position: absolute;
+  left: 50%;
+  top: -8px;
+  transform: translate(-50%, 0);
+  color: var(--accent);
+  font-size: 1.6em;
+  font-weight: 800;
+  text-shadow: 0 0 14px rgba(245, 200, 75, 0.9), 0 4px 10px rgba(0, 0, 0, 0.8);
+  opacity: 0;
+  animation: vr-lore-pop 4.4s ease-out infinite;
+  white-space: nowrap;
+  pointer-events: none;
+}
+@keyframes vr-lore-pop {
+  0%, 30%   { opacity: 0; transform: translate(-50%, 0); }
+  40%       { opacity: 1; transform: translate(-50%, -8px); }
+  60%       { opacity: 1; transform: translate(-50%, -36px); }
+  72%, 100% { opacity: 0; transform: translate(-50%, -36px); }
+}
+.vr-arrow {
+  color: var(--accent);
+  font-size: 2.2em;
+  font-weight: 700;
+  opacity: 0.7;
+}
+.vr-counter {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text);
+  font-size: 2.6em;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.vr-counter-track {
+  position: relative;
+  width: 1.4em;
+  height: 1em;
+  text-align: center;
+}
+.vr-c-before, .vr-c-after {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+}
+.vr-c-before {
+  color: var(--text-mute);
+  animation: vr-c-before-cycle 4.4s ease-in-out infinite;
+}
+.vr-c-after {
+  color: var(--accent);
+  text-shadow: 0 0 18px rgba(245, 200, 75, 0.7);
+  animation: vr-c-after-cycle 4.4s ease-in-out infinite;
+}
+@keyframes vr-c-before-cycle {
+  0%, 50%   { opacity: 1; }
+  55%, 100% { opacity: 0; }
+}
+@keyframes vr-c-after-cycle {
+  0%, 50%   { opacity: 0; transform: scale(0.7); }
+  60%       { opacity: 1; transform: scale(1.35); }
+  72%, 100% { opacity: 1; transform: scale(1); }
+}
+.vr-c-of {
+  color: var(--text-mute);
+  font-size: 0.7em;
+  font-weight: 600;
+}
+.vr-crown {
+  font-size: 3em;
+  opacity: 0;
+  transform: translateY(20px) scale(0.4);
+  animation: vr-crown-pop 4.4s ease-out infinite;
+  filter: drop-shadow(0 0 18px rgba(245, 200, 75, 0.85));
+}
+@keyframes vr-crown-pop {
+  0%, 60%   { opacity: 0; transform: translateY(20px) scale(0.4) rotate(-8deg); }
+  70%       { opacity: 1; transform: translateY(-6px) scale(1.25) rotate(6deg); }
+  82%       { opacity: 1; transform: translateY(0)    scale(1)    rotate(0deg); }
+  95%, 100% { opacity: 0; transform: translateY(0)    scale(1)    rotate(0deg); }
 }
 
 /* Draw flyer — flying card from deck to hand.
@@ -2108,4 +2736,59 @@ body::before {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+/* ----- Develop Your Brain — look flyer + flip + pick highlight ----- */
+.develop-look-flyer {
+  z-index: 260;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+  perspective: 1200px;
+}
+.develop-look-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.develop-look-inner.flipped { transform: rotateY(180deg); }
+.develop-look-back,
+.develop-look-front {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--card-radius);
+  backface-visibility: hidden;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.75);
+}
+.develop-look-back {
+  background: var(--card-back-url) center/cover no-repeat;
+}
+.develop-look-front {
+  background-size: cover;
+  background-position: center;
+  transform: rotateY(180deg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.develop-look-flyer.develop-look-pick .develop-look-front {
+  box-shadow:
+    0 0 0 3px rgba(245, 200, 75, 0.95),
+    0 0 28px 8px rgba(245, 200, 75, 0.7),
+    0 18px 44px rgba(0, 0, 0, 0.75);
+  animation: develop-pick-pulse 0.9s ease-in-out infinite;
+}
+@keyframes develop-pick-pulse {
+  0%, 100% { transform: rotateY(180deg) translateY(0)    scale(1); }
+  50%      { transform: rotateY(180deg) translateY(-8px) scale(1.06); }
+}
+
+/* 액션 카드 자체 — 효과 종료 시 fade-out (discard 로). */
+.develop-action-flyer {
+  z-index: 265;
+}
+.develop-action-flyer.develop-action-fade {
+  opacity: 0;
+  transform: scale(0.7) translateY(20px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
 }

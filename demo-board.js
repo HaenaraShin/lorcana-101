@@ -15,6 +15,25 @@ document.addEventListener('error', (e) => {
   }
 }, true);
 
+/* ----- Image preload -----
+   WebOS TV 등 저사양 장비에서 페이지 전환 중 네트워크 fetch + 디코딩으로
+   버벅이는 현상이 있어, 페이지 로드 직후 모든 카드 이미지를 백그라운드로
+   미리 받아 브라우저 캐시·디코더에 올려둔다. 약 40장(~6MB)이라 초기
+   로드 영향은 작고, 이후 전환은 캐시 hit. */
+const PRELOADED_IMAGES = [];
+function preloadAllCardImages() {
+  const urls = new Set();
+  urls.add('card_back.jpeg');
+  Object.values(CARDS).forEach(c => { if (c && c.image) urls.add(c.image); });
+  urls.forEach(url => {
+    const im = new Image();
+    im.decoding = 'async';
+    im.src = url;
+    PRELOADED_IMAGES.push(im);
+  });
+}
+preloadAllCardImages();
+
 /* T0 — pre-mulligan opening hand. PlayerA went first.
    self.deck order matches the scripted draws documented in the scenario:
      T2 begin draw   → vanellope (used as T2 ink)
@@ -22,18 +41,22 @@ document.addEventListener('error', (e) => {
      T3 Mulan effect → robin_champion (used for T5 shift)
      T4 begin draw   → gadget (used as T4 ink)
      T5 begin draw   → moana_curious (used as T5 ink, duplicate of starting hand) */
+/* 초기 7장 핸드. 게임 시작(p-game-start-action) 페이지에서 stagger 드로우로 채움.
+   STATE 시작 시점에는 비어 있어야 그 페이지 진입 전까지 핸드가 보이지 않음. */
+const INITIAL_HAND_KEYS = [
+  'song_newworld',
+  'song_newworld',
+  'song_letitgo',
+  'character_merida_archer',
+  'character_cinderella_dream',
+  'song_spooky',
+  'character_pete_ghost',
+];
+
 const STATE = {
   self: {
     lore: 0,
-    hand: [
-      'song_newworld',
-      'song_newworld',
-      'song_letitgo',
-      'character_merida_archer',
-      'character_cinderella_dream',
-      'song_spooky',
-      'character_pete_ghost',
-    ],
+    hand: [],
     inkwell: [],
     play: [],
     discard: [],
@@ -43,6 +66,8 @@ const STATE = {
        to playInkAdd('opp', ...), so they never enter this deck. */
     deck: [
       'character_johnsmith_protector', // T3 begin draw
+      'sim_mulan',                     // T3 Develop Your Brain look — 핸드로 선택
+      'character_scar_king',           // T3 Develop Your Brain look — 덱 바닥으로
       'sim_robin_champion',            // T3 Mulan effect draw
       'character_moana_curious',       // T5 begin draw
       'character_jasmine_strategist',  // T7 begin draw
@@ -72,14 +97,15 @@ function makeCard(card, opts = {}) {
     const base = CARDS[opts.shiftedFrom];
     const baseImg = document.createElement('img');
     baseImg.className = 'shift-base-img';
+    baseImg.decoding = 'async';
     baseImg.src = base.image;
     baseImg.alt = base.fullName;
     el.appendChild(baseImg);
   }
   const img = document.createElement('img');
+  img.decoding = 'async';
   img.src = card.image;
   img.alt = card.fullName;
-  img.loading = 'lazy';
   el.appendChild(img);
   if (opts.damage && opts.damage > 0) {
     const dmg = document.createElement('div');
@@ -155,9 +181,9 @@ function renderSelfHand() {
       const card = CARDS[key];
       if (card) {
         const img = document.createElement('img');
+        img.decoding = 'async';
         img.src = card.image;
         img.alt = card.fullName;
-        img.loading = 'lazy';
         el.appendChild(img);
       } else {
         el.classList.add('back');
@@ -188,27 +214,39 @@ function renderDialogs(visible) {
   if (!visible) return;
 
   DIALOGS.forEach(d => {
-    /* Locate the card by key in current STATE — skips cards that have left play. */
-    const idx = STATE[d.side].play.findIndex(p => p.card === d.cardKey);
-    if (idx < 0) return;
-    const playRoot = document.getElementById(d.side === 'opp' ? 'opp-play' : 'self-play');
-    const targetCard = playRoot.querySelectorAll('.card')[idx];
-    if (!targetCard) return;
-    const rect = targetCard.getBoundingClientRect();
+    /* Anchor 결정: zoneSelector 우선(영역 기반), 없으면 cardKey(play 카드) 기반. */
+    let rect;
+    if (d.zoneSelector) {
+      const el = document.querySelector(d.zoneSelector);
+      if (!el) return;
+      rect = el.getBoundingClientRect();
+    } else {
+      const idx = STATE[d.side].play.findIndex(p => p.card === d.cardKey);
+      if (idx < 0) return;
+      const playRoot = document.getElementById(d.side === 'opp' ? 'opp-play' : 'self-play');
+      const targetCard = playRoot.querySelectorAll('.card')[idx];
+      if (!targetCard) return;
+      rect = targetCard.getBoundingClientRect();
+    }
     const bubble = document.createElement('div');
     bubble.className = 'dialog-bubble ' + d.tail;
     bubble.innerHTML = d.text;
     bubble.style.position = 'fixed';
     bubble.dataset.side    = d.side;
-    bubble.dataset.cardKey = d.cardKey;
+    if (d.cardKey) bubble.dataset.cardKey = d.cardKey;
+    const off = d.offset || { x: 0, y: 0 };
     if (d.placement === 'below') {
-      // bubble below the card; tail-up points up at the card
-      bubble.style.left = (rect.left + d.offset.x) + 'px';
-      bubble.style.top = (rect.bottom + 12) + 'px';
+      bubble.style.left = (rect.left + off.x) + 'px';
+      bubble.style.top  = (rect.bottom + 12) + 'px';
+    } else if (d.placement === 'left-of') {
+      /* 말풍선 본체가 anchor 왼쪽, 꼬리(tail-right)는 anchor 가리킴. */
+      const bubbleW = d.bubbleWidth || 210;
+      bubble.style.left = (rect.left - bubbleW - 22 + off.x) + 'px';
+      bubble.style.top  = (rect.top + rect.height / 2 - 22 + off.y) + 'px';
+      bubble.style.maxWidth = bubbleW + 'px';
     } else {
-      // default: bubble above the card; tail-down points down at the card
-      bubble.style.left = (rect.left + d.offset.x) + 'px';
-      bubble.style.top = (rect.top + d.offset.y) + 'px';
+      bubble.style.left = (rect.left + off.x) + 'px';
+      bubble.style.top  = (rect.top + off.y) + 'px';
     }
     document.body.appendChild(bubble);
   });
@@ -249,7 +287,10 @@ applyFs();
 /* ============================================================
    BEGIN PHASE — READY → SET → DRAW animation sequence
    ============================================================ */
-const sleep = ms => new Promise(r => setTimeout(r, ms));
+/* FAST_MODE: 챕터 점프 중에는 sleep을 즉시 resolve 해서 sim 함수들을 빠르게
+   replay 한다. CSS transition도 body.fast-mode 클래스로 무력화. */
+let FAST_MODE = false;
+const sleep = ms => FAST_MODE ? Promise.resolve() : new Promise(r => setTimeout(r, ms));
 
 /* PlayerA went first (T1, T3, T5, ...). Odd turns = self's turn, even = opp. */
 let currentTurn = 0; /* T0 / pre-mulligan at startup; first turn is T1 */
@@ -271,7 +312,9 @@ function setSubtitle(step, html) {
 
 /* Staggered ink exert — kick each card off ~140ms apart so they all
    rotate concurrently but visibly cascade left → right. Resolves once
-   the last card's rotate transition has finished. */
+   the last card's rotate transition has finished.
+   FAST_MODE (챕터 점프 중) 에서는 setTimeout 콜백이 발화될 시간이 없어 STATE 변경이
+   누락된다 — 동기적으로 즉시 처리. */
 async function exertReadyInk(sideKey, count) {
   const inkRoot = document.getElementById(sideKey === 'opp' ? 'opp-inkwell' : 'self-inkwell');
   if (!inkRoot) return;
@@ -281,6 +324,15 @@ async function exertReadyInk(sideKey, count) {
     if (!STATE[sideKey].inkwell[i].exerted) targets.push(i);
   }
   if (targets.length === 0) return;
+
+  if (FAST_MODE) {
+    targets.forEach(idx => {
+      STATE[sideKey].inkwell[idx].exerted = true;
+      const el = inkRoot.children[idx];
+      if (el) el.classList.add('exerted');
+    });
+    return;
+  }
 
   const STAGGER = 140;
   const INK_TRANSITION_MS = 550; /* must match .ink-card transition duration */
@@ -515,13 +567,14 @@ const PAGES = [
   { id: 'p1-title',         type: 'intro', kind: 'title',         label: '타이틀' },
   { id: 'p2-world',         type: 'intro', kind: 'world',         label: '세계관' },
   { id: 'p3-ink-colors',    type: 'intro', kind: 'ink-colors',    label: '잉크 컬러' },
-  { id: 'p4-anatomy',       type: 'intro', kind: 'card-anatomy',  label: '카드 한 장 들여다보기', cardKey: 'sim_robin_beloved' },
+  { id: 'p4-anatomy',       type: 'intro', kind: 'card-anatomy',  label: '카드 한 장 들여다보기', cardKey: 'character_mickey_true_friend' },
   { id: 'p5-board-intro',   type: 'sim',   label: '🗺 보드 소개',                                fn: () => playBoardIntro() },
   { id: 'p6-transition',    type: 'intro', kind: 'transition',    label: '전환',
     title: '그럼 실제로 게임을<br>진행하면서 배워볼까요?' },
   { id: 'p7-game-start',    type: 'intro', kind: 'transition',    label: '게임 시작',
     title: '게임 시작!',
     description: '이제 게임을 시작해볼까요?<br>가위바위보나 주사위를 던져 이긴 사람이 선/후공을 정합니다.<br><br>설명을 위해 <strong>나의 선공</strong>으로 게임을 시작해봅시다.' },
+  { id: 'sim-game-start',   type: 'sim',   label: '🎲 게임 시작 (주사위 + 7장 드로우)', fn: () => playGameStart() },
   { id: 'p8-mulligan-brief',type: 'intro', kind: 'transition',    label: '멀리건 안내',
     title: '멀리건',
     description: `초기 핸드 7장을 받은 뒤, 게임 시작 전 <strong class="hl">단 1회</strong>에 한해 마음에 들지 않는 카드를 골라 <strong>덱 밑으로 되돌릴 수</strong> 있습니다.<br>
@@ -530,19 +583,72 @@ const PAGES = [
 초반 잉크 카드와 핵심 캐릭터의 균형을 잡는 중요한 결정입니다.` },
   /* ----- SIM ----- */
   { id: 'sim-mulligan',               type: 'sim', label: '🤝 멀리건',                          fn: () => playMulligan() },
-  { id: 'sim-t1-begin',               type: 'sim', label: '▶ T1 비기닝 페이즈',                 fn: playBeginPhase },
+  { id: 'sim-t1-begin',               type: 'sim', label: '▶ T1 비기닝 페이즈',
+    fn: async () => {
+      await playBeginPhase();
+      /* 선공 T1: 비기닝 페이즈 자체를 스킵(드로우 없음) — 덱 옆에 룰 안내 말풍선.
+         p12(p-ink-rules) 진입 시점(= sim-t1-aurora-ink 시작) 에 제거. */
+      if (!DIALOGS.some(d => d.tag === 'first-turn-no-draw')) {
+        DIALOGS.push({
+          side: 'self', tag: 'first-turn-no-draw',
+          zoneSelector: '.self-lr .deck-zone',
+          text: '<strong>선공의 첫 턴</strong>은<br>드로우를 생략합니다',
+          tail: 'tail-right',
+          placement: 'left-of',
+        });
+        applyToggles();
+      }
+    } },
   { id: 'p-ink-rules',                type: 'intro', kind: 'ink-rules', label: '잉크 추가 규칙' },
-  { id: 'sim-t1-aurora-ink',          type: 'sim', label: '💧 T1 잉크 추가 (Aurora)',           fn: () => playInkAdd('self', 'character_aurora_dream') },
+  { id: 'sim-t1-aurora-ink',          type: 'sim', label: '💧 T1 잉크 추가 (Aurora)',
+    fn: async () => {
+      for (let i = DIALOGS.length - 1; i >= 0; i--) {
+        if (DIALOGS[i].tag === 'first-turn-no-draw') DIALOGS.splice(i, 1);
+      }
+      applyToggles();
+      await playInkAdd('self', 'character_aurora_dream');
+    } },
   { id: 'p-ready-exert-brief', type: 'intro', kind: 'ready-exert', label: 'Ready / Exert 설명' },
   { id: 'p-cost-exert-brief',  type: 'intro', kind: 'cost-exert',  label: '잉크 비용 지불 설명' },
   { id: 'sim-t1-robin-play',          type: 'sim', label: '🦊 T1 Robin Beloved 플레이',         fn: () => playCard('self', 'sim_robin_beloved') },
   { id: 'sim-t2-begin',               type: 'sim', label: '▶ T2 비기닝 페이즈',                 fn: playBeginPhase },
   { id: 'sim-t2-vanellope-ink',       type: 'sim', label: '💧 T2 잉크 추가 (Vanellope, 상대)',  fn: () => playInkAdd('opp', 'character_vanellope_sugar') },
   { id: 'sim-t2-pluto-play',          type: 'sim', label: '🐶 T2 Pluto 플레이 (상대)',          fn: () => playCard('opp', 'sim_pluto') },
-  { id: 'sim-t3-begin',               type: 'sim', label: '▶ T3 비기닝 페이즈',                 fn: playBeginPhase },
-  { id: 'sim-t3-pete-ink',            type: 'sim', label: '💧 T3 잉크 추가 (Pete)',             fn: () => playInkAdd('self', 'character_pete_ghost') },
+  { id: 'p-begin-brief',              type: 'intro', kind: 'begin-brief', label: '비기닝 페이즈 설명' },
+  { id: 'sim-t3-begin',               type: 'sim', label: '▶ T3 비기닝 페이즈',                 fn: async () => {
+      await playBeginPhase();
+      /* Pluto 가 Ready 상태가 되어 챌린지 대상이 될 수 없음을 안내.
+         p-quest-brief(25p) 진입 시점(= sim-t3-mulan-effect 종료) 에 제거. */
+      if (!DIALOGS.some(d => d.cardKey === 'sim_pluto' && d.tag === 'ready-untargetable')) {
+        DIALOGS.push({
+          side: 'opp', cardKey: 'sim_pluto', tag: 'ready-untargetable',
+          text: '<strong>Ready</strong> 상태이므로<br>챌린지의 대상이 되지 않습니다',
+          tail: 'tail-down',
+          offset: { x: -10, y: -55 },
+        });
+        applyToggles();
+      }
+    } },
+  { id: 'p-action-brief-t3',          type: 'intro', kind: 'action-brief', label: '액션 (T3 설명)' },
+  { id: 'sim-t3-develop',             type: 'sim', label: '✨ T3 Develop Your Brain 발동',     fn: () => playDevelopYourBrain() },
+  { id: 'sim-t3-pete-ink',            type: 'sim', label: '💧 T3 잉크 추가 (Pete)',
+    fn: async () => {
+      /* Develop Your Brain 후 떴던 'action-to-discard' 말풍선 정리. */
+      for (let i = DIALOGS.length - 1; i >= 0; i--) {
+        if (DIALOGS[i].tag === 'action-to-discard') DIALOGS.splice(i, 1);
+      }
+      applyToggles();
+      await playInkAdd('self', 'character_pete_ghost');
+    } },
   { id: 'sim-t3-mulan-play',          type: 'sim', label: '🥷 T3 Mulan 플레이',                 fn: () => playCard('self', 'sim_mulan') },
-  { id: 'sim-t3-mulan-effect',        type: 'sim', label: '✨ T3 Mulan 효과 (draw + discard)',  fn: () => playMulanEffect() },
+  { id: 'sim-t3-mulan-effect',        type: 'sim', label: '✨ T3 Mulan 효과 (draw + discard)',  fn: async () => {
+      await playMulanEffect();
+      /* 다음 페이지가 p-quest-brief — Pluto ready-untargetable 말풍선을 닫음. */
+      for (let i = DIALOGS.length - 1; i >= 0; i--) {
+        if (DIALOGS[i].tag === 'ready-untargetable') DIALOGS.splice(i, 1);
+      }
+      applyToggles();
+    } },
   { id: 'p-quest-brief',              type: 'intro', kind: 'quest-brief', label: '퀘스트 설명' },
   { id: 'sim-t3-quest',               type: 'sim', label: '🌳 T3 Robin Beloved 퀘스트',         fn: () => playQuest('self', 'sim_robin_beloved') },
   { id: 'sim-t4-begin',               type: 'sim', label: '▶ T4 비기닝 페이즈',                 fn: playBeginPhase },
@@ -556,8 +662,8 @@ const PAGES = [
   { id: 'p-challenge-brief',          type: 'intro', kind: 'challenge-brief', label: '챌린지 설명' },
   { id: 'sim-t5-robin-pluto-blocked', type: 'sim', label: '❌ T5 Robin → Pluto 시도 (차단)',
     fn: () => playChallengeBlocked('self', 'sim_robin_champion', 'opp', 'sim_pluto', 'sim_rajah') },
-  { id: 'sim-t5-mulan-rajah',         type: 'sim', label: '⚔ T5 Mulan → Rajah 챌린지',          fn: () => playChallenge('self', 'sim_mulan', 'opp', 'sim_rajah') },
-  { id: 'sim-t5-robin-rajah',         type: 'sim', label: '⚔ T5 Robin → Rajah 챌린지',          fn: () => playChallenge('self', 'sim_robin_champion', 'opp', 'sim_rajah') },
+  { id: 'sim-t5-mulan-rajah',         type: 'sim', label: '¤ T5 Mulan → Rajah 챌린지',          fn: () => playChallenge('self', 'sim_mulan', 'opp', 'sim_rajah') },
+  { id: 'sim-t5-robin-rajah',         type: 'sim', label: '¤ T5 Robin → Rajah 챌린지',          fn: () => playChallenge('self', 'sim_robin_champion', 'opp', 'sim_rajah') },
   /* ----- T6 (Player B) ----- */
   { id: 'sim-t6-begin',               type: 'sim', label: '▶ T6 비기닝 페이즈',                 fn: playBeginPhase },
   { id: 'sim-t6-stitch-ink',          type: 'sim', label: '💧 T6 잉크 추가 (Stitch, 상대)',     fn: () => playInkAdd('opp', 'character_stitch_rockstar') },
@@ -568,13 +674,39 @@ const PAGES = [
   { id: 'p-sing-brief',               type: 'intro', kind: 'sing-brief', label: 'Sing(노래) 설명' },
   { id: 'sim-t7-letitgo',             type: 'sim', label: '🎵 T7 Let It Go (Sing)',             fn: () => playLetItGo() },
   { id: 'sim-t7-jasmine-play',        type: 'sim', label: '👸 T7 Jasmine 플레이 (비용 4)',      fn: () => playCard('self', 'character_jasmine_strategist') },
-  /* ----- CLOSING — additional rule briefs ----- */
-  { id: 'p-action-brief',  type: 'intro', kind: 'action-brief', label: '액션' },
+  /* ----- CLOSING — additional rule briefs.
+     액션 설명은 T3 (p-action-brief-t3) 에서 이미 진행했으므로 closing 에서는 중복 생략. */
   { id: 'p-item-brief',    type: 'intro', kind: 'item-brief',   label: '아이템' },
   { id: 'p-location-brief',type: 'intro', kind: 'location-brief', label: '로케이션' },
+  /* ----- FINALE — last-turn jump → victory condition → win ----- */
+  { id: 'p-finale-excuse', type: 'intro', kind: 'finale-excuse', label: '마지막 턴 안내' },
+  { id: 'sim-finale-jump', type: 'sim',   label: '⏱ 마지막 턴으로 점프',   fn: () => playFinaleJump() },
+  { id: 'p-victory-rule',  type: 'intro', kind: 'victory-rule',  label: '승리 조건' },
+  { id: 'sim-finale-win',  type: 'sim',   label: '🏆 마지막 턴 — 승리',     fn: () => playFinaleVictory() },
   { id: 'p-deck-brief',    type: 'intro', kind: 'deck-brief',   label: '덱 구성' },
   { id: 'p-thanks',        type: 'intro', kind: 'thanks',       label: '감사합니다' },
 ];
+
+/* 챕터 분기점 — 우측 컬럼 상단의 챕터 레일에서 즉시 점프 가능한 지점. */
+const CHAPTERS = [
+  { id: 'p1-title',           label: '표지' },
+  { id: 'p2-world',           label: '세계관' },
+  { id: 'p3-ink-colors',      label: '잉크 컬러' },
+  { id: 'p4-anatomy',         label: '카드' },
+  { id: 'p5-board-intro',     label: '보드' },
+  { id: 'p8-mulligan-brief',  label: '멀리건' },
+  { id: 'sim-t1-begin',       label: 'T1' },
+  { id: 'sim-t2-begin',       label: 'T2' },
+  { id: 'sim-t3-begin',       label: 'T3' },
+  { id: 'sim-t4-begin',       label: 'T4' },
+  { id: 'sim-t5-begin',       label: 'T5' },
+  { id: 'sim-t6-begin',       label: 'T6' },
+  { id: 'sim-t7-begin',       label: 'T7' },
+  { id: 'p-finale-excuse',    label: '마지막 턴' },
+  { id: 'p-item-brief',       label: '마무리' },
+].map(c => ({ ...c, pageIndex: PAGES.findIndex(p => p.id === c.id) }))
+ .filter(c => c.pageIndex >= 0);
+
 let currentPage = 0;
 let busy = false;
 
@@ -591,6 +723,17 @@ function snapshot() {
   });
 }
 
+/* 페이지 0 진입 직전(STATE 변경 전)의 초기 스냅샷.
+   ⚠ gotoChapter 에서 사용할 때는 반드시 deep copy 후 restore — restoreFromSnapshot 이
+   reference 할당이라 원본이 오염되면 다음 점프 시 누적 버그가 발생. */
+const INITIAL_SNAPSHOT = {
+  STATE:    JSON.parse(JSON.stringify(STATE)),
+  DIALOGS:  [],
+  currentTurn: 0,
+  subtitleStep: '',
+  subtitleText: '',
+};
+
 function applyActiveSide() {
   document.querySelectorAll('.player-side').forEach(el => el.classList.remove('active'));
   if (currentTurn === 0) {
@@ -602,8 +745,10 @@ function applyActiveSide() {
 }
 
 function clearTransientOverlays() {
-  document.querySelectorAll('.draw-flyer, .play-flyer, .ink-add-flyer, .challenge-arrow, .dialog-bubble, .board-intro-demo')
+  document.querySelectorAll('.draw-flyer, .play-flyer, .ink-add-flyer, .challenge-arrow, .dialog-bubble, .board-intro-demo, .game-start-dice-wrap, .game-start-bubble, .finale-clock-wrap, .victory-badge')
     .forEach(el => el.remove());
+  /* 승리 모드 해제 — 페이지 떠나면 카드 인터랙션 복귀. */
+  document.body.classList.remove('victory-mode');
   hideBadge();
   /* Restore visibilities possibly tweaked by sim pages (e.g., board-intro). */
   const hand = document.getElementById('self-hand');
@@ -618,6 +763,9 @@ function restoreFromSnapshot(snap) {
   currentTurn = snap.currentTurn;
   if (snap.subtitleStep !== undefined) setSubtitle(snap.subtitleStep, snap.subtitleText);
   clearTransientOverlays();
+  /* 승리 연출 잔존 클래스 정리 — finale 페이지 backward 시 카드/카운터에 글로우 남는 것 방지. */
+  document.querySelectorAll('.victory-card-glow').forEach(el => el.classList.remove('victory-card-glow'));
+  document.getElementById('self-lore-num')?.classList.remove('lore-victory-pulse');
   renderSide('self');
   renderSide('opp');
   renderSelfHand();
@@ -708,7 +856,7 @@ function renderIntroHTML(page) {
     if (!card) return '<div class="overlay-section"><p>카드를 찾을 수 없습니다.</p></div>';
     return `
       <div class="card-anatomy">
-        <img class="card-anatomy-img" src="${card.image}" alt="${card.fullName}">
+        <img class="card-anatomy-img" decoding="async" src="${card.image}" alt="${card.fullName}">
         <div class="callout c-cost"><strong>잉크 비용</strong><br>이 카드를 플레이하는 데 필요한 잉크 수<br>— 이 카드는 <strong>${card.cost}</strong></div>
         <div class="callout c-name-version">
           <strong>이름 · <em>${card.name}</em></strong><br>
@@ -717,8 +865,8 @@ function renderIntroHTML(page) {
           <small>같은 캐릭터의 다른 모습/스탯</small>
         </div>
         <div class="callout c-stats">
-          <strong>힘 ⚔ ${card.strength}</strong> <small>챌린지 시 주는 데미지</small><br>
-          <strong>의지력 ❤ ${card.willpower}</strong> <small>받을 수 있는 데미지 한계 (초과 시 banish)</small>
+          <strong>힘 ¤ ${card.strength}</strong> <small>챌린지 시 주는 데미지</small><br>
+          <strong>의지력 ⛉ ${card.willpower}</strong> <small>받을 수 있는 데미지 한계 (초과 시 banish)</small>
         </div>
         <div class="callout c-lore"><strong>로어 ◆ ${card.lore}</strong><br>이 캐릭터로 퀘스트할 때 얻는 Lore 점수</div>
       </div>`;
@@ -772,8 +920,8 @@ function renderIntroHTML(page) {
         </div>
         <p class="challenge-desc">
           자신의 <strong>Ready</strong> 상태인 캐릭터를 <strong>Exert</strong>하여 상대 캐릭터에게 챌린지를 선언합니다.<br>
-          서로의 <strong>공격력(⚔)</strong>만큼 데미지를 주고받고, 받은 데미지가 <strong>의지력(❤)</strong> 이상이 되면 <strong class="hl">banish</strong>됩니다.<br>
-          상대의 <strong>Ready</strong> 상태 캐릭터는 챌린지 대상이 될 수 없습니다. <em>(단, Bodyguard는 예외)</em>
+          서로의 <strong>공격력(¤)</strong>만큼 데미지를 주고받고, 받은 데미지가 <strong>의지력(⛉)</strong> 이상이 되면 <strong class="hl">banish</strong>됩니다.<br>
+          상대의 <strong>Ready</strong> 상태 캐릭터는 챌린지 대상이 될 수 없습니다.
         </p>
       </div>`;
   }
@@ -825,10 +973,48 @@ function renderIntroHTML(page) {
           이후 캐릭터가 좌측의 <strong>이동 비용(Move Cost)</strong>을 지불하면
           그 로케이션으로 이동해 효과를 적용받습니다.<br>
           로케이션 자체도 <strong>챌린지의 대상</strong>이 될 수 있고,
-          받은 데미지가 의지력(❤)을 넘으면 <strong class="hl">banish</strong>됩니다.<br>
+          받은 데미지가 의지력(⛉)을 넘으면 <strong class="hl">banish</strong>됩니다.<br>
           자신의 비기닝 페이즈 <strong>SET</strong> 단계에 로케이션 위에 표시된
           <strong>로어(◆)</strong>만큼 자동으로 Lore를 얻습니다.
         </p>
+      </div>`;
+  }
+  if (page.kind === 'finale-excuse') {
+    return `
+      <div class="overlay-title-block finale-excuse-block">
+        <h1 class="overlay-title finale-excuse-title">여러 턴 뒤 —</h1>
+        <p class="overlay-subtitle finale-excuse-sub">Player A의 <strong>마지막 턴</strong>.</p>
+      </div>`;
+  }
+  if (page.kind === 'victory-rule') {
+    const sample = CARDS['sim_robin_beloved'];
+    const sampleImg = sample?.image || 'card_back.jpeg';
+    return `
+      <div class="overlay-section closing-brief victory-rule">
+        <h2 class="overlay-section-title">승리 조건</h2>
+        <div class="vr-anim">
+          <div class="vr-card-wrap">
+            <img class="vr-card" src="${sampleImg}" alt="quest demo">
+            <div class="vr-lore-pop">◆+1</div>
+          </div>
+          <div class="vr-arrow">→</div>
+          <div class="vr-counter">
+            <div class="vr-counter-track">
+              <span class="vr-c-before">19</span>
+              <span class="vr-c-after">20</span>
+            </div>
+            <span class="vr-c-of">/ 20</span>
+          </div>
+          <div class="vr-crown">👑</div>
+        </div>
+        <p class="closing-desc victory-rule-headline">
+          먼저 <strong class="hl">Lore 20점</strong>을 모은 플레이어가 <strong>승리</strong>합니다.
+        </p>
+        <ul class="closing-bullets">
+          <li>캐릭터로 <strong>퀘스트</strong>하면 그 캐릭터의 <strong>◆</strong> 만큼 Lore 획득</li>
+          <li>자신의 비기닝 페이즈 SET 단계에 <strong>로케이션</strong>의 ◆ 만큼 자동 획득</li>
+          <li>일부 카드 <strong>효과</strong>로 추가 Lore 획득 (예: Robin Hood — Champion 챌린지 +2)</li>
+        </ul>
       </div>`;
   }
   if (page.kind === 'deck-brief') {
@@ -873,7 +1059,7 @@ function renderIntroHTML(page) {
               <img class="cost-exert-card sing-song" src="${song.image}" alt="${song.fullName}">
             </div>
             <div class="cost-exert-label"><strong>Sing</strong> — 비용 ⓘ <strong>0</strong> 잉크</div>
-            <div class="cost-exert-label sing-sub">(가수를 <strong>Exert</strong>합니다)</div>
+            <div class="cost-exert-label sing-sub">캐릭터를 <strong>Exert</strong>합니다.</div>
           </div>
         </div>
         <p class="sing-desc">
@@ -895,8 +1081,8 @@ function renderIntroHTML(page) {
             <div class="shift-card-zone single">
               <img class="cost-exert-card" src="${champion.image}" alt="${champion.fullName}">
             </div>
-            <div class="cost-exert-label">일반 플레이 — 비용 <strong>6</strong></div>
-            <div class="cost-inkwell shift-cost-6">${ink(6)}</div>
+            <div class="cost-exert-label">일반 플레이 — 비용 <strong>5</strong></div>
+            <div class="cost-inkwell shift-cost-5">${ink(5)}</div>
           </div>
           <div class="shift-vs">VS</div>
           <div class="shift-item">
@@ -955,6 +1141,58 @@ function renderIntroHTML(page) {
             <img class="cost-exert-card" src="${c2.image}" alt="${c2.fullName}">
             <div class="cost-exert-label">비용 <strong>${c2.cost}</strong></div>
             <div class="cost-inkwell">${inksFor(c2.cost)}</div>
+          </div>
+        </div>
+      </div>`;
+  }
+  if (page.kind === 'begin-brief') {
+    const jj = CARDS['character_jackjack_potential'];
+    const jjImg = jj?.image || 'card_back.jpeg';
+    const robin = CARDS['sim_robin_beloved'];
+    const robinImg = robin?.image || 'card_back.jpeg';
+    return `
+      <div class="overlay-section begin-brief">
+        <h2 class="overlay-section-title">비기닝 페이즈</h2>
+        <p class="overlay-section-sub">내 턴이 시작될 때 진행하는 <strong>READY → SET → DRAW</strong> 3단계</p>
+        <div class="begin-phases">
+          <div class="begin-phase phase-ready">
+            <div class="phase-step">1</div>
+            <h3>READY</h3>
+            <p>내 모든 <strong>캐릭터와 잉크</strong>를<br>Ready(세로) 상태로 복귀</p>
+            <div class="begin-ready-demo">
+              <div class="ready-demo-item">
+                <div class="ready-demo-char" style="background-image: url('${robinImg}');"></div>
+                <div class="ready-demo-tag">캐릭터</div>
+              </div>
+              <div class="ready-demo-item">
+                <div class="ready-demo-ink"></div>
+                <div class="ready-demo-tag">잉크</div>
+              </div>
+            </div>
+            <p class="begin-card-caption begin-ready-note">
+              <strong>Exert(가로)</strong> 상태의 플레이 중인 카드와 잉크를<br>
+              모두 <strong>Ready(세로)</strong> 상태로 되돌립니다
+            </p>
+          </div>
+          <div class="begin-phase phase-set">
+            <div class="phase-step">2</div>
+            <h3>SET</h3>
+            <p>"<strong>턴이 시작될 때</strong>" 발동하는<br>효과들이 처리됩니다</p>
+            <img src="${jjImg}" alt="Jack-Jack Parr - Incredible Potential" class="begin-card-example begin-card-glow" decoding="async">
+            <p class="begin-card-caption">예: <em>Jack-Jack Parr — Incredible Potential</em><br>"<strong>At the start of your turn,</strong> you may put the top card of your deck into your discard..."</p>
+          </div>
+          <div class="begin-phase phase-draw">
+            <div class="phase-step">3</div>
+            <h3>DRAW</h3>
+            <p>덱에서 카드 <strong>1장</strong>을<br>핸드로 드로우합니다</p>
+            <div class="begin-draw-demo">
+              <div class="begin-deck"><div class="card-back deck-back"></div></div>
+              <div class="begin-draw-card"><div class="card-back deck-back"></div></div>
+            </div>
+            <p class="begin-card-caption begin-draw-note">
+              단, <strong>선공의 첫 턴</strong>에는 드로우하지 않고<br>
+              <strong>후공의 첫 턴부터</strong> 드로우를 진행합니다
+            </p>
           </div>
         </div>
       </div>`;
@@ -1090,6 +1328,7 @@ function updatePageUI() {
   if (label) label.textContent = PAGES[currentPage]?.label || '';
   if (prev) prev.disabled = busy || currentPage === 0;
   if (next) next.disabled = busy || currentPage >= PAGES.length - 1;
+  renderChapterRail();
 }
 
 async function nextPage() {
@@ -1135,6 +1374,149 @@ async function prevPage() {
 
 document.getElementById('btn-next-page')?.addEventListener('click', nextPage);
 document.getElementById('btn-prev-page')?.addEventListener('click', prevPage);
+
+/* ----- Chapter jump (fast-replay) -----
+   특정 챕터의 시작 페이지로 즉시 이동. STATE 일관성을 위해 0번부터 목표
+   페이지까지 sim 함수를 FAST_MODE 로 빠르게 replay 한다 (sleep 0, CSS
+   transition 0). 14개 챕터 모두 1초 이내 도달.
+
+   ⚠ INITIAL_SNAPSHOT 은 반드시 deep copy 해서 사용. restoreFromSnapshot 의
+   reference 할당 + 이후 sim 함수의 STATE.self.*.push() 가 원본 스냅샷을
+   오염시키면 다음 점프 시 카드가 누적되는 버그가 발생한다. */
+async function gotoChapter(targetIdx) {
+  if (busy || targetIdx < 0 || targetIdx >= PAGES.length) return;
+  if (targetIdx === currentPage) return;
+  setBusy(true);
+  FAST_MODE = true;
+  document.body.classList.add('fast-mode');
+  try {
+    /* 초기 상태로 리셋 — deep copy 필수 */
+    restoreFromSnapshot(JSON.parse(JSON.stringify(INITIAL_SNAPSHOT)));
+    HISTORY.length = 0;
+    hideOverlay();
+    clearTransientOverlays();
+    currentPage = 0;
+
+    /* 0번 페이지 처리 */
+    const first = PAGES[0];
+    if (first.type === 'intro') await showOverlay(first);
+
+    /* 0 → target 까지 순차 진행 */
+    for (let i = 1; i <= targetIdx; i++) {
+      currentPage = i;
+      const page = PAGES[i];
+      clearTransientOverlays();
+      if (page.type === 'sim') {
+        hideOverlay();
+        snapshot();
+        if (page.fn) await page.fn();
+      } else {
+        await showOverlay(page);
+      }
+    }
+  } finally {
+    FAST_MODE = false;
+    document.body.classList.remove('fast-mode');
+    setBusy(false);
+    updatePageUI();
+  }
+}
+
+/* 현재 페이지가 어느 챕터 구간에 속하는지 (해당 챕터.pageIndex 이하인 마지막 것) */
+function currentChapterIndex() {
+  let last = 0;
+  for (let i = 0; i < CHAPTERS.length; i++) {
+    if (CHAPTERS[i].pageIndex <= currentPage) last = i;
+    else break;
+  }
+  return last;
+}
+
+/* ----- Chapter rail — 세로 트랙 + step dot + 드래그 popup -----
+   처음 호출 시 한 번 구조를 만들고 핸들러 부착. 이후 호출은 active 표시 + thumb 위치만 갱신. */
+function pctOfChapter(idx) {
+  return (idx / (CHAPTERS.length - 1)) * 100;
+}
+
+function ensureChapterRail() {
+  const root = document.getElementById('chapter-rail');
+  if (!root || root.dataset.built === '1') return;
+  root.dataset.built = '1';
+
+  const track = document.createElement('div');
+  track.className = 'chapter-track';
+  track.innerHTML = '<div class="chapter-track-line"></div>';
+  CHAPTERS.forEach((ch, idx) => {
+    const dot = document.createElement('div');
+    dot.className = 'chapter-dot';
+    dot.dataset.idx = idx;
+    dot.style.top = `calc(${pctOfChapter(idx)}% - 3px)`;
+    dot.title = ch.label;
+    track.appendChild(dot);
+  });
+  const thumb = document.createElement('div');
+  thumb.className = 'chapter-thumb';
+  track.appendChild(thumb);
+  const popup = document.createElement('div');
+  popup.className = 'chapter-popup';
+  track.appendChild(popup);
+  root.appendChild(track);
+
+  /* ----- Pointer 드래그/클릭 ----- */
+  let drag = null;
+  const idxFromY = (clientY) => {
+    const rect = track.getBoundingClientRect();
+    const inner = rect.height - 12; /* track-line top:6 bottom:6 */
+    const rel = (clientY - rect.top - 6) / inner;
+    const i = Math.round(rel * (CHAPTERS.length - 1));
+    return Math.max(0, Math.min(CHAPTERS.length - 1, i));
+  };
+  const showPreview = (idx) => {
+    const pct = pctOfChapter(idx);
+    thumb.style.top = `calc(${pct}% - 5px)`;
+    popup.style.top = `calc(${pct}% + 1px)`;
+    popup.textContent = CHAPTERS[idx].label;
+    popup.classList.add('visible');
+  };
+  const hidePreview = () => popup.classList.remove('visible');
+
+  track.addEventListener('pointerdown', (e) => {
+    if (busy) return;
+    e.preventDefault();
+    try { track.setPointerCapture(e.pointerId); } catch {}
+    root.classList.add('dragging');
+    drag = { pointerId: e.pointerId };
+    drag.idx = idxFromY(e.clientY);
+    showPreview(drag.idx);
+  });
+  track.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    drag.idx = idxFromY(e.clientY);
+    showPreview(drag.idx);
+  });
+  const endDrag = (commit, e) => {
+    if (!drag || (e && e.pointerId !== drag.pointerId)) return;
+    const targetIdx = drag.idx;
+    root.classList.remove('dragging');
+    hidePreview();
+    drag = null;
+    if (commit && targetIdx != null) gotoChapter(CHAPTERS[targetIdx].pageIndex);
+  };
+  track.addEventListener('pointerup',     (e) => endDrag(true,  e));
+  track.addEventListener('pointercancel', (e) => endDrag(false, e));
+}
+
+function renderChapterRail() {
+  ensureChapterRail();
+  const root = document.getElementById('chapter-rail');
+  if (!root) return;
+  const activeIdx = currentChapterIndex();
+  const thumb = root.querySelector('.chapter-thumb');
+  if (thumb) thumb.style.top = `calc(${pctOfChapter(activeIdx)}% - 5px)`;
+  root.querySelectorAll('.chapter-dot').forEach((d, i) => {
+    d.classList.toggle('active', i === activeIdx);
+  });
+}
 
 /* ============================================================
    CARD MODAL — click any board/hand card to inspect it large.
@@ -1185,13 +1567,68 @@ document.addEventListener('keydown', (e) => {
   }
   /* If a modal is open, swallow nav keys (don't change pages while reading a card). */
   if (document.querySelector('.card-modal')) return;
-  if (e.key === ' ' || e.key === 'ArrowRight') {
+  if (e.key === ' ' || e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown') {
     e.preventDefault();
     nextPage();
-  } else if (e.key === 'Backspace' || e.key === 'ArrowLeft') {
+  } else if (e.key === 'Backspace' || e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
     e.preventDefault();
     prevPage();
   }
+});
+
+/* ============================================================
+   EDGE PULL GESTURE — 화면 좌/우 가장자리에서 시작해 임계값 이상
+   드래그 후 놓으면 페이지 전환. 화면 자체는 움직이지 않음 (트래킹만).
+   ============================================================ */
+const EDGE_HIT_PX    = 70;   /* 좌/우 가장자리 hit zone 폭 */
+const PULL_THRESHOLD = 150;  /* 페이지 전환 임계값 (드래그 거리) */
+
+let pullState = null;
+
+function endPull(commit) {
+  if (!pullState) return;
+  const side = pullState.side;
+  document.body.classList.remove('edge-pulling');
+  pullState = null;
+  if (commit) {
+    if (side === 'L') prevPage();
+    else nextPage();
+  }
+}
+
+document.addEventListener('pointerdown', (e) => {
+  if (pullState || busy) return;
+  if (document.querySelector('.card-modal')) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  /* 컨트롤 위에서는 무시 — 슬라이더/버튼/체크박스 등 */
+  if (e.target.closest('.page-controls, button, input, select, .card-modal')) return;
+
+  const x = e.clientX;
+  const w = window.innerWidth;
+  let side = null;
+  if (x < EDGE_HIT_PX) side = 'L';
+  else if (x > w - EDGE_HIT_PX) side = 'R';
+  if (!side) return;
+  /* 좌측 풀(prev)인데 첫 페이지거나 우측 풀(next)인데 마지막 페이지면 비활성 */
+  if (side === 'L' && currentPage === 0) return;
+  if (side === 'R' && currentPage >= PAGES.length - 1) return;
+
+  pullState = { side, startX: x, pointerId: e.pointerId };
+  document.body.classList.add('edge-pulling');
+});
+
+document.addEventListener('pointerup', (e) => {
+  if (!pullState || e.pointerId !== pullState.pointerId) return;
+  const dx = e.clientX - pullState.startX;
+  let commit = false;
+  if (pullState.side === 'L' && dx > PULL_THRESHOLD) commit = true;
+  else if (pullState.side === 'R' && dx < -PULL_THRESHOLD) commit = true;
+  endPull(commit);
+});
+
+document.addEventListener('pointercancel', (e) => {
+  if (!pullState || e.pointerId !== pullState.pointerId) return;
+  endPull(false);
 });
 
 /* Slider is view-only (visual indicator); clicking it snaps to the chosen
@@ -1227,10 +1664,203 @@ const MULLIGAN_RETURN_KEYS = [
 ];
 const MULLIGAN_DRAW_KEYS = [
   'sim_robin_beloved',
-  'sim_mulan',
+  'action_develop_your_brain', /* Mulan 대신 — T3 에 발동해 Mulan 을 덱에서 찾음 */
   'character_moana_curious',
   'character_aurora_dream',
 ];
+
+/* ============================================================
+   Staggered self-draw — N장을 잉크 exert 동시 캐스케이드 스타일로 드로우.
+   모든 키를 한 번에 STATE.self.hand 에 push 하고 renderSelfHand 1회만 호출 →
+   마지막 N개 카드에 .incoming 으로 숨김 → 각 카드 끝 위치를 미리 측정 →
+   각 flyer 를 STAGGER ms 간격으로 발화. 마지막 flyer 가 도착하면 모두 reveal.
+   FAST_MODE 에서는 STATE 만 갱신.
+   ============================================================ */
+async function drawCardsStaggerSelf(keys, opts = {}) {
+  const STAGGER   = opts.stagger ?? 140;
+  const FLIGHT_MS = opts.flightMs ?? 1000;
+
+  const handEl = document.getElementById('self-hand');
+  const deckEl = document.querySelector('.self-lr .deck-zone');
+  if (!handEl || !deckEl || keys.length === 0) return;
+
+  if (FAST_MODE) {
+    keys.forEach(k => STATE.self.hand.push(k));
+    renderSelfHand();
+    return;
+  }
+
+  /* 1) STATE 일괄 push + renderSelfHand 1회 → fan 위치 확정. */
+  const startIdx = STATE.self.hand.length;
+  keys.forEach(k => STATE.self.hand.push(k));
+  renderSelfHand();
+
+  /* 2) 마지막 N개에 .incoming 적용 (도착 전까지 잠시 숨김). */
+  const incomingCards = [];
+  for (let j = 0; j < keys.length; j++) {
+    const card = handEl.children[startIdx + j];
+    if (card) {
+      card.classList.add('incoming');
+      incomingCards.push(card);
+    }
+  }
+
+  await new Promise(r => requestAnimationFrame(r));
+
+  /* 3) 덱 시작 위치 (fan 좌표계 기준) — 모든 flyer가 공유. */
+  const dRect = deckEl.getBoundingClientRect();
+  const fRect = handEl.getBoundingClientRect();
+  const startLeft = dRect.left - fRect.left;
+  const startTop  = dRect.top  - fRect.top;
+  const startW    = dRect.width;
+  const startH    = dRect.height;
+
+  /* 4) 각 카드별 끝 위치 측정. */
+  const targets = incomingCards.map((card, j) => ({
+    el: card,
+    endLeft: card.offsetLeft,
+    endTop:  card.offsetTop,
+    endW:    card.offsetWidth,
+    endH:    card.offsetHeight,
+    endTransform: getComputedStyle(card).transform,
+    key: keys[j],
+  }));
+
+  /* 5) Flyer 들을 STAGGER 간격으로 발화. */
+  const flyerPromises = targets.map((t, j) => new Promise(async (resolve) => {
+    await sleep(j * STAGGER);
+
+    const drawnCard = CARDS[t.key];
+    const faceUrl = drawnCard?.image || '';
+
+    const flyer = document.createElement('div');
+    flyer.className = 'draw-flyer';
+    flyer.style.left   = startLeft + 'px';
+    flyer.style.top    = startTop  + 'px';
+    flyer.style.width  = startW    + 'px';
+    flyer.style.height = startH    + 'px';
+    flyer.style.transform = 'rotate(0deg)';
+    flyer.innerHTML = `
+      <div class="flyer-inner">
+        <div class="flyer-back"></div>
+        <div class="flyer-front">
+          <div class="flyer-face" style="background: url('${faceUrl}') center/cover no-repeat;"></div>
+        </div>
+      </div>`;
+    handEl.appendChild(flyer);
+
+    /* Forced reflow — 시작 위치(start)를 paint commit 후 rAF 에서 끝 위치로 전환.
+       이 단계가 없으면 첫 호출 시 브라우저가 start/end 를 같은 batch 로 합쳐
+       transition 이 발화하지 않고 카드가 끝 위치로 즉시 점프하는 버그가 발생. */
+    void flyer.offsetHeight;
+
+    requestAnimationFrame(() => {
+      flyer.style.left      = t.endLeft + 'px';
+      flyer.style.top       = t.endTop  + 'px';
+      flyer.style.width     = t.endW    + 'px';
+      flyer.style.height    = t.endH    + 'px';
+      flyer.style.transform = t.endTransform;
+      flyer.querySelector('.flyer-inner').classList.add('peeking');
+    });
+
+    await sleep(FLIGHT_MS);
+    t.el.classList.remove('incoming');
+    flyer.remove();
+    resolve();
+  }));
+
+  await Promise.all(flyerPromises);
+}
+
+/* ============================================================
+   GAME START — 주사위로 선/후공 결정 → A 말풍선 → 양쪽 7장 stagger 드로우.
+   ============================================================ */
+async function playGameStart() {
+  setSubtitle(
+    '게임 시작',
+    '주사위로 선·후공을 정한 뒤 각자 <strong>7장</strong>의 초기 핸드를 받습니다.'
+  );
+
+  if (FAST_MODE) {
+    INITIAL_HAND_KEYS.forEach(k => STATE.self.hand.push(k));
+    for (let i = 0; i < 7; i++) STATE.opp.hand.push('_filler');
+    renderSelfHand();
+    return;
+  }
+
+  /* 1) 주사위 박스 두 개 — Player B(opp) 위쪽 보드, Player A(self) 아래쪽 보드. */
+  const wrap = document.createElement('div');
+  wrap.className = 'game-start-dice-wrap';
+  wrap.innerHTML = `
+    <div class="dice-col opp">
+      <div class="dice-label">Player B</div>
+      <div class="dice-box" data-side="b">?</div>
+    </div>
+    <div class="dice-col self">
+      <div class="dice-label">Player A</div>
+      <div class="dice-box" data-side="a">?</div>
+    </div>`;
+  document.body.appendChild(wrap);
+
+  await sleep(500);
+
+  /* 2) 결과: A 는 매번 무작위(2~6), B 는 A 보다 작게(1~A-1) → A 가 항상 승. */
+  const aVal = 2 + Math.floor(Math.random() * 5);    // 2..6
+  const bVal = 1 + Math.floor(Math.random() * (aVal - 1)); // 1..(aVal-1)
+
+  const diceA = wrap.querySelector('.dice-box[data-side="a"]');
+  const diceB = wrap.querySelector('.dice-box[data-side="b"]');
+  const ROLL_MS = 1200;
+  const TICK = 70;
+  const startT = Date.now();
+  await new Promise(resolve => {
+    const id = setInterval(() => {
+      diceA.textContent = String(Math.floor(Math.random() * 6) + 1);
+      diceB.textContent = String(Math.floor(Math.random() * 6) + 1);
+      if (Date.now() - startT >= ROLL_MS) {
+        clearInterval(id);
+        diceA.textContent = String(aVal);
+        diceB.textContent = String(bVal);
+        diceA.classList.add('settled', 'winner');
+        diceB.classList.add('settled');
+        resolve();
+      }
+    }, TICK);
+  });
+
+  await sleep(700);
+
+  /* 3) Player A 말풍선: "먼저 시작하겠습니다!". A 주사위 박스 위에 정렬. */
+  const bubble = document.createElement('div');
+  bubble.className = 'dialog-bubble tail-down game-start-bubble';
+  bubble.innerHTML = '먼저 시작하겠습니다!';
+  document.body.appendChild(bubble);
+  const aRect = diceA.getBoundingClientRect();
+  bubble.style.position = 'fixed';
+  bubble.style.left = (aRect.left + aRect.width / 2 - 110) + 'px';
+  bubble.style.top  = (aRect.top - 78) + 'px';
+  bubble.style.zIndex = '9100';
+
+  await sleep(1400);
+
+  /* 4) 주사위 + 말풍선 페이드아웃. */
+  wrap.classList.add('fade-out');
+  bubble.classList.add('fade-out');
+  await sleep(450);
+  wrap.remove();
+  bubble.remove();
+
+  /* 5) 양쪽 7장 stagger 드로우 — 잉크 exert 캐스케이드 스타일. */
+  const HAND_STAGGER = 110;
+  const oppPromise = (async () => {
+    for (let i = 0; i < 7; i++) {
+      drawCardOpp(); /* 비동기 시작 (sleep 내장) — await 하지 않고 stagger */
+      await sleep(HAND_STAGGER);
+    }
+  })();
+  const selfPromise = drawCardsStaggerSelf(INITIAL_HAND_KEYS, { stagger: HAND_STAGGER });
+  await Promise.all([selfPromise, oppPromise]);
+}
 
 async function playMulligan() {
   const handEl = document.getElementById('self-hand');
@@ -1313,13 +1943,9 @@ async function playMulligan() {
   /* 5) Brief pause. */
   await sleep(400);
 
-  /* 6) Draw 4 replacements (the scripted mulligan draws). Sequential so each
-        hand-card's offset can be measured cleanly without race conditions. */
-  for (const key of MULLIGAN_DRAW_KEYS) {
-    STATE.self.deck.unshift(key); /* place at top so drawCardSelf picks it up */
-    await drawCardSelf();
-    await sleep(120);
-  }
+  /* 6) Draw 4 replacements — 잉크 exert 동시 캐스케이드 스타일.
+        모든 카드를 한번에 STATE 에 push 후 4개의 flyer 가 STAGGER 간격으로 발화. */
+  await drawCardsStaggerSelf(MULLIGAN_DRAW_KEYS, { stagger: 140 });
 }
 
 /* ============================================================
@@ -1600,7 +2226,7 @@ async function playChallenge(attackerSide, attackerKey, defenderSide, defenderKe
     if (!DIALOGS.some(d => d.cardKey === 'sim_robin_champion' && d.tag === 'champ-bonus')) {
       DIALOGS.push({
         side: attackerSide, cardKey: 'sim_robin_champion', tag: 'champ-bonus',
-        text: '챌린지로 적을 무너뜨릴 때마다<br><strong>+2 Lore</strong>를 얻어요!',
+        text: '<strong>Robin Hood의 고유효과:</strong><br>챌린지로 적을 무너뜨릴 때마다<br><strong>+2 Lore</strong>를 얻어요!',
         tail: 'tail-up',
         offset: { x: -10, y: 240 },
         placement: 'below',
@@ -1621,6 +2247,18 @@ async function playMulanEffect() {
     `T${currentTurn} / Mulan의 효과`,
     `덱에서 1장 드로우 → 핸드에서 1장 디스카드`
   );
+
+  /* 뮬란 카드 위에 효과 설명 말풍선 — 효과 종료 후 자동 제거 (mulan-effect-explain tag). */
+  if (!DIALOGS.some(d => d.cardKey === 'sim_mulan' && d.tag === 'mulan-effect-explain')) {
+    DIALOGS.push({
+      side: 'self', cardKey: 'sim_mulan', tag: 'mulan-effect-explain',
+      text: '뮬란의 등장 효과 발동!<br>덱에서 <strong>1장 드로우</strong>한 뒤<br>핸드에서 <strong>1장을 버립니다</strong>',
+      tail: 'tail-down',
+      offset: { x: 0, y: -55 },
+    });
+    applyToggles();
+  }
+  await sleep(800);
 
   /* (1) Draw the scripted card off the top of self.deck. */
   await drawCardSelf();
@@ -1672,6 +2310,178 @@ async function playMulanEffect() {
   renderSelfHand();
   renderDiscard('self', 'self-discard');
   flyer.remove();
+
+  /* 효과 종료 — 설명 말풍선 제거 */
+  for (let i = DIALOGS.length - 1; i >= 0; i--) {
+    if (DIALOGS[i].tag === 'mulan-effect-explain') DIALOGS.splice(i, 1);
+  }
+  applyToggles();
+}
+
+/* ============================================================
+   DEVELOP YOUR BRAIN — 1코 액션. 덱 top 2장 face-up 펼침 → Mulan 선택해 핸드,
+   Scar 는 덱 바닥으로. 액션 카드 자체는 사용 후 discard.
+   ============================================================ */
+async function playDevelopYourBrain() {
+  const ACTION_KEY = 'action_develop_your_brain';
+  const PICK_KEY   = 'sim_mulan';
+  const BOTTOM_KEY = 'character_scar_king';
+  const card = CARDS[ACTION_KEY];
+  if (!card) return;
+
+  setSubtitle(
+    `T${currentTurn} / Develop Your Brain`,
+    `덱에서 카드 <strong>2장</strong>을 보고 <strong>1장</strong>은 핸드로, 나머지는 덱 바닥으로.`
+  );
+
+  const handEl = document.getElementById('self-hand');
+  const deckEl = document.querySelector('.self-lr .deck-zone');
+  const handIdx = STATE.self.hand.indexOf(ACTION_KEY);
+  if (!handEl || !deckEl || handIdx < 0) return;
+
+  /* (1) 비용 1잉크 exert. */
+  await exertReadyInk('self', 1);
+  await sleep(150);
+
+  /* (2) 액션 카드를 핸드에서 화면 중앙 약간 위로 reveal flyer. */
+  const handCardEl = handEl.children[handIdx];
+  const sRect = handCardEl.getBoundingClientRect();
+  const actionFlyer = document.createElement('div');
+  actionFlyer.className = 'play-flyer develop-action-flyer';
+  actionFlyer.style.left   = sRect.left + 'px';
+  actionFlyer.style.top    = sRect.top + 'px';
+  actionFlyer.style.width  = sRect.width + 'px';
+  actionFlyer.style.height = sRect.height + 'px';
+  actionFlyer.innerHTML = `<img src="${card.image}" alt="${card.fullName}">`;
+  document.body.appendChild(actionFlyer);
+  handCardEl.style.opacity = '0';
+
+  const centerX = window.innerWidth / 2;
+  const centerY = window.innerHeight * 0.32;
+  void actionFlyer.offsetHeight;
+  requestAnimationFrame(() => {
+    actionFlyer.style.left = (centerX - sRect.width * 0.5) + 'px';
+    actionFlyer.style.top  = (centerY - sRect.height * 0.5) + 'px';
+    actionFlyer.style.transform = 'scale(1.15)';
+  });
+  await sleep(800);
+
+  /* (3) 액션 카드를 위쪽으로 살짝 더 밀고, 그 아래 face-down 2장 펼침. */
+  requestAnimationFrame(() => {
+    actionFlyer.style.top  = (centerY - sRect.height * 1.15) + 'px';
+    actionFlyer.style.transform = 'scale(0.9)';
+  });
+  await sleep(450);
+
+  const dRect = deckEl.getBoundingClientRect();
+  const lookW = sRect.width * 1.2;
+  const lookH = sRect.height * 1.2;
+  const spread = lookW * 0.65;
+  const lookY = centerY + lookH * 0.05;
+
+  function makeLookFlyer() {
+    const f = document.createElement('div');
+    f.className = 'play-flyer develop-look-flyer';
+    f.style.left   = dRect.left + 'px';
+    f.style.top    = dRect.top + 'px';
+    f.style.width  = dRect.width + 'px';
+    f.style.height = dRect.height + 'px';
+    f.innerHTML = `<div class="develop-look-inner"><div class="develop-look-back card-back"></div><div class="develop-look-front"></div></div>`;
+    document.body.appendChild(f);
+    return f;
+  }
+  const lookL = makeLookFlyer();
+  const lookR = makeLookFlyer();
+
+  void lookL.offsetHeight; void lookR.offsetHeight;
+
+  /* deck → 가운데 좌·우로 펼침. */
+  requestAnimationFrame(() => {
+    lookL.style.left   = (centerX - spread - lookW * 0.5) + 'px';
+    lookL.style.top    = lookY + 'px';
+    lookL.style.width  = lookW + 'px';
+    lookL.style.height = lookH + 'px';
+
+    lookR.style.left   = (centerX + spread - lookW * 0.5) + 'px';
+    lookR.style.top    = lookY + 'px';
+    lookR.style.width  = lookW + 'px';
+    lookR.style.height = lookH + 'px';
+  });
+  await sleep(850);
+
+  /* (4) 두 장 face-up flip (Mulan 좌, Scar 우). */
+  const pickCard   = CARDS[PICK_KEY];
+  const bottomCard = CARDS[BOTTOM_KEY];
+  lookL.querySelector('.develop-look-front').style.backgroundImage = `url('${pickCard.image}')`;
+  lookR.querySelector('.develop-look-front').style.backgroundImage = `url('${bottomCard.image}')`;
+  lookL.querySelector('.develop-look-inner').classList.add('flipped');
+  lookR.querySelector('.develop-look-inner').classList.add('flipped');
+  await sleep(950);
+
+  /* (5) Mulan 강조 (선택). */
+  lookL.classList.add('develop-look-pick');
+  await sleep(900);
+
+  /* (6) STATE 갱신: 액션 카드 hand → discard, 덱 top 2장 제거,
+        Mulan 핸드 append, Scar 덱 바닥에 push. */
+  STATE.self.hand.splice(handIdx, 1);
+  STATE.self.discard.push(ACTION_KEY);
+  STATE.self.deck.shift(); /* PICK_KEY 위치 — 핸드로 갈 카드 */
+  STATE.self.deck.shift(); /* BOTTOM_KEY 위치 — 바닥으로 갈 카드 */
+  STATE.self.hand.push(PICK_KEY);
+  STATE.self.deck.push(BOTTOM_KEY);
+
+  renderSelfHand();
+  renderDiscard('self', 'self-discard');
+
+  /* 새로 추가된 Mulan 의 hand-card 자리 측정 → 그 위치로 lookL 비행. */
+  const newMulanEl = handEl.lastElementChild;
+  newMulanEl.classList.add('incoming');
+  await new Promise(r => requestAnimationFrame(r));
+  const targetRect = newMulanEl.getBoundingClientRect();
+
+  requestAnimationFrame(() => {
+    lookL.classList.remove('develop-look-pick');
+    lookL.style.left   = targetRect.left + 'px';
+    lookL.style.top    = targetRect.top + 'px';
+    lookL.style.width  = targetRect.width + 'px';
+    lookL.style.height = targetRect.height + 'px';
+    lookL.style.transform = getComputedStyle(newMulanEl).transform;
+    /* face-up 유지 (이미 flipped) */
+  });
+
+  /* Scar 는 face-down 으로 돌리고 덱 "바닥(아래)" 으로 빨려들어가는 시각.
+     deck zone 의 하단 모서리로 이동하면서 크기 작아지고 opacity 0 → "덱 맨 아래로" 인상. */
+  lookR.querySelector('.develop-look-inner').classList.remove('flipped');
+  requestAnimationFrame(() => {
+    lookR.style.left    = (dRect.left + dRect.width * 0.1) + 'px';
+    lookR.style.top     = (dRect.bottom - dRect.height * 0.15) + 'px'; /* deck 아래쪽 */
+    lookR.style.width   = (dRect.width * 0.8) + 'px';
+    lookR.style.height  = (dRect.height * 0.18) + 'px'; /* 납작하게 */
+    lookR.style.opacity = '0';
+  });
+
+  /* 액션 카드 자체는 discard 로 fade-out. */
+  actionFlyer.classList.add('develop-action-fade');
+
+  await sleep(1000);
+  newMulanEl.classList.remove('incoming');
+  lookL.remove();
+  lookR.remove();
+  actionFlyer.remove();
+
+  /* 액션 카드가 discard 로 간 시점 — discard 영역에 룰 안내 말풍선.
+     다음 페이지 sim-t3-pete-ink 시작 시 제거. */
+  if (!DIALOGS.some(d => d.tag === 'action-to-discard')) {
+    DIALOGS.push({
+      side: 'self', tag: 'action-to-discard',
+      zoneSelector: '.self-lr .discard-zone',
+      text: '<strong>Action</strong> 카드는 발동 후<br>바로 <strong>discard</strong> 로 갑니다',
+      tail: 'tail-right',
+      placement: 'left-of',
+    });
+    applyToggles();
+  }
 }
 
 /* ============================================================
@@ -1699,7 +2509,7 @@ async function playPlutoEffect() {
     const rect = cardEl.getBoundingClientRect();
     const bubble = document.createElement('div');
     bubble.className = 'dialog-bubble tail-up';
-    bubble.innerHTML = '<strong>−1 잉크!</strong> 다음 캐릭터';
+    bubble.innerHTML = '<strong>Pluto의 고유효과:</strong><br><strong>−1 잉크!</strong> 다음 캐릭터';
     bubble.style.position = 'fixed';
     bubble.style.left = (rect.left + rect.width / 2 - 80) + 'px';
     bubble.style.top  = (rect.bottom + 14) + 'px';
@@ -1791,6 +2601,147 @@ function drawLoreArrow(sx, sy, dx, dy) {
   arrow.style.transform = `rotate(${angle}rad)`;
   document.body.appendChild(arrow);
   return arrow;
+}
+
+/* ============================================================
+   FINALE — last-turn jump (clock SVG → STATE swap) → quest victory.
+   PlayerA 가 14 → 16 → 18 → 20 으로 quest 3번에 도달, 게임 종료.
+   ============================================================ */
+function setupFinalBoardState() {
+  STATE.self.lore = 14;
+  STATE.self.hand = ['character_jasmine_resourceful', 'song_spooky'];
+  STATE.self.inkwell = Array.from({ length: 10 }, () => ({ exerted: false }));
+  STATE.self.play = [
+    { card: 'character_aurora_dream',  exerted: true,  damage: 2 },
+    { card: 'character_moana_curious', exerted: true,  damage: 1 },
+    { card: 'character_merida_archer', exerted: false, damage: 0 },
+  ];
+  STATE.self.discard = ['action_three_arrows'];
+  STATE.self.deck = ['character_mulan_diplomat'];
+
+  STATE.opp.lore = 19;
+  STATE.opp.hand = [];
+  STATE.opp.inkwell = Array.from({ length: 7 }, () => ({ exerted: false }));
+  STATE.opp.play = [
+    { card: 'character_stitch_rockstar',  exerted: true, damage: 0 },
+    { card: 'character_vanellope_champ',  exerted: true, damage: 0 },
+    { card: 'character_rex_dinosaur',     exerted: true, damage: 0 },
+    { card: 'character_stitch_trickster', exerted: true, damage: 0 },
+  ];
+  STATE.opp.discard = ['character_vanellope_sugar'];
+  STATE.opp.deck = [];
+
+  /* 이전 안내 dialog 들은 마지막 턴 시점에는 모두 무효. 일괄 정리. */
+  DIALOGS.length = 0;
+
+  /* currentTurn = 14: 다음 playBeginPhase 호출 시 15 (홀수=self) 가 되어 PlayerA 턴 시작. */
+  currentTurn = 14;
+
+  renderSide('self');
+  renderSide('opp');
+  renderSelfHand();
+  applyToggles();
+}
+
+async function playFinaleJump() {
+  setSubtitle(
+    '마지막 턴',
+    '여러 턴이 지나 — Player A의 <strong>마지막 턴</strong>입니다.'
+  );
+
+  if (FAST_MODE) {
+    setupFinalBoardState();
+    return;
+  }
+
+  /* 검은 fade overlay + 회전 시계 SVG. */
+  const wrap = document.createElement('div');
+  wrap.className = 'finale-clock-wrap';
+  /* 12개 tick line 동적 생성. */
+  const ticks = Array.from({ length: 12 }, (_, i) => {
+    const a = i * 30 * Math.PI / 180;
+    const x1 = 100 + Math.sin(a) * 78;
+    const y1 = 100 - Math.cos(a) * 78;
+    const x2 = 100 + Math.sin(a) * 88;
+    const y2 = 100 - Math.cos(a) * 88;
+    return `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}"/>`;
+  }).join('');
+  wrap.innerHTML = `
+    <svg class="finale-clock-svg" viewBox="0 0 200 200" aria-hidden="true">
+      <circle class="cl-face" cx="100" cy="100" r="92"/>
+      <g class="cl-ticks">${ticks}</g>
+      <line class="cl-hand cl-hour" x1="100" y1="100" x2="100" y2="55"/>
+      <line class="cl-hand cl-min"  x1="100" y1="100" x2="100" y2="35"/>
+      <circle class="cl-center" cx="100" cy="100" r="6"/>
+    </svg>
+    <div class="finale-clock-caption">— 여러 턴 뒤 —</div>
+  `;
+  document.body.appendChild(wrap);
+
+  await sleep(450); /* fade-in 끝나기 대기 */
+
+  /* 시계 회전 중간에 STATE 갱신 — 사용자가 시계만 보고 있을 때 보드는 이미 바뀜. */
+  await sleep(900);
+  setupFinalBoardState();
+
+  await sleep(900); /* 시계 회전 마저 끝낼 시간 */
+
+  wrap.classList.add('fade-out');
+  await sleep(450);
+  wrap.remove();
+}
+
+async function playFinaleVictory() {
+  /* 이전 진입 잔존 클래스 정리 (backward → forward 재진입 시 깨끗). */
+  document.querySelectorAll('.victory-card-glow').forEach(el => el.classList.remove('victory-card-glow'));
+  document.getElementById('self-lore-num')?.classList.remove('lore-victory-pulse');
+
+  /* T15 시작 — Begin phase: READY → SET → DRAW (Mulan Considerate). */
+  await playBeginPhase();
+  await sleep(400);
+
+  /* Quest 3연발 — 14 → 16 → 18 → 20. */
+  await playQuest('self', 'character_aurora_dream');
+  await sleep(450);
+  await playQuest('self', 'character_moana_curious');
+  await sleep(450);
+  await playQuest('self', 'character_merida_archer');
+
+  /* 승리 연출. */
+  await playVictorySequence();
+}
+
+async function playVictorySequence() {
+  if (FAST_MODE) return; /* 점프 모드에선 연출 생략 */
+
+  /* 카드 인터랙션 차단 — 승리 연출 중에는 카드 hover/zoom/click 비활성화. */
+  document.body.classList.add('victory-mode');
+
+  /* (1) Lore 카운터 황금 펄스 — 20점 임팩트. */
+  const loreEl = document.getElementById('self-lore-num');
+  if (loreEl) loreEl.classList.add('lore-victory-pulse');
+
+  /* (2) 마지막 quester (Merida) 황금 외곽 글로우. */
+  const playEl = document.getElementById('self-play');
+  const meridaIdx = STATE.self.play.findIndex(p => p.card === 'character_merida_archer');
+  const meridaEl = meridaIdx >= 0 ? playEl?.children[meridaIdx] : null;
+  if (meridaEl) meridaEl.classList.add('victory-card-glow');
+
+  await sleep(700);
+
+  /* (3) 풀스크린 VICTORY 배지. */
+  const badge = document.createElement('div');
+  badge.className = 'victory-badge';
+  badge.innerHTML = `
+    <div class="victory-icon">🏆</div>
+    <div class="victory-text">VICTORY</div>
+    <div class="victory-sub">Player A wins</div>
+  `;
+  document.body.appendChild(badge);
+
+  setSubtitle('승리!', 'Player A 가 <strong>Lore 20</strong>에 도달해 게임을 승리했습니다.');
+
+  await sleep(2200);
 }
 
 /* ============================================================
@@ -2105,13 +3056,15 @@ async function playCard(sideKey, cardKey, options = {}) {
   /* 4) Hide source hand card if self. */
   if (sourceEl) sourceEl.style.opacity = '0';
 
-  /* 5) Build flyer; transition to target slot center. */
+  /* 5) Build flyer; transition to target slot center.
+        startExerted 시 처음부터 90도 회전 상태로 fly (Rajah Bodyguard 같은 케이스). */
   const flyer = document.createElement('div');
   flyer.className = 'play-flyer';
   flyer.style.left   = sRect.left + 'px';
   flyer.style.top    = sRect.top  + 'px';
   flyer.style.width  = sRect.width  + 'px';
   flyer.style.height = sRect.height + 'px';
+  if (startExerted) flyer.style.transform = 'rotate(90deg)';
   flyer.innerHTML = `<img src="${card.image}" alt="${card.fullName}">`;
   document.body.appendChild(flyer);
 
@@ -2124,6 +3077,8 @@ async function playCard(sideKey, cardKey, options = {}) {
     flyer.style.top    = (cy - H / 2) + 'px';
     flyer.style.width  = W + 'px';
     flyer.style.height = H + 'px';
+    /* startExerted 시 transform 유지 (회전 풀리지 않도록 명시 설정) */
+    if (startExerted) flyer.style.transform = 'rotate(90deg)';
   });
 
   await sleep(870);
