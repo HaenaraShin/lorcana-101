@@ -32,7 +32,7 @@ window.MESSAGES.ko = {
       cost: '<strong>잉크 비용</strong><br>이 카드를 플레이하는 데 필요한 잉크 수<br>— 이 카드는 <strong>{cost}</strong>',
       nameVersion:
         '\n          <strong>이름 · <em>{name}</em></strong><br>\n' +
-        '          <small>같은 이름은 한 덱에 4장까지</small><br>\n' +
+        '          <small>같은 이름+버전은 한 덱에 4장까지</small><br>\n' +
         '          <strong>버전 · <em>"{version}"</em></strong><br>\n' +
         '          <small>같은 캐릭터의 다른 모습/스탯</small>\n        ',
       stats:

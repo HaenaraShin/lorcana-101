@@ -63,7 +63,7 @@
         <div class="callout c-cost"><strong>잉크 비용</strong><br>이 카드를 플레이하는 데 필요한 잉크 수<br>— 이 카드는 <strong>3</strong></div>
         <div class="callout c-name-version">
           <strong>이름 · <em>Mickey Mouse</em></strong><br>
-          <small>같은 이름은 한 덱에 4장까지</small><br>
+          <small>같은 이름+버전은 한 덱에 4장까지</small><br>
           <strong>버전 · <em>"True Friend"</em></strong><br>
           <small>같은 캐릭터의 다른 모습/스탯</small>
         </div>
