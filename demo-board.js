@@ -792,6 +792,11 @@ function renderIntroHTML(page) {
         <h1 class="overlay-title">Disney Lorcana Guide</h1>
         <p class="overlay-subtitle">How to play</p>
         <p class="overlay-description">${t('intro.title.desc')}</p>
+        <div class="lang-select">
+          <button class="lang-btn${I18N.lang === 'ko' ? ' active' : ''}" data-lang="ko">한국어</button>
+          <button class="lang-btn${I18N.lang === 'en' ? ' active' : ''}" data-lang="en">English</button>
+          <button class="lang-btn" disabled title="준비중 / Coming soon">日本語</button>
+        </div>
         <p class="overlay-hint">
           <kbd>Space</kbd> / <kbd>→</kbd> ${t('intro.title.next')} ·
           <kbd>Backspace</kbd> / <kbd>←</kbd> ${t('intro.title.prev')}

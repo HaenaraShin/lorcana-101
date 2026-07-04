@@ -5,6 +5,11 @@
         <h1 class="overlay-title">Disney Lorcana Guide</h1>
         <p class="overlay-subtitle">How to play</p>
         <p class="overlay-description">디즈니 로카나 플레이방법을 배워봅시다!</p>
+        <div class="lang-select">
+          <button class="lang-btn active" data-lang="ko">한국어</button>
+          <button class="lang-btn" data-lang="en">English</button>
+          <button class="lang-btn" disabled title="준비중 / Coming soon">日本語</button>
+        </div>
         <p class="overlay-hint">
           <kbd>Space</kbd> / <kbd>→</kbd> 다음 ·
           <kbd>Backspace</kbd> / <kbd>←</kbd> 이전

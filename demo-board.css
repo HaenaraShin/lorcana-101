@@ -1122,6 +1122,39 @@ body.edge-pulling {
   padding: 2px 10px;
   border-radius: 6px;
 }
+/* 언어 선택 (타이틀 페이지) — kbd/골드 팔레트와 동일 계열 */
+.lang-select {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin: 20px 0 4px;
+}
+.lang-btn {
+  background: rgba(10, 14, 26, 0.6);
+  border: 1px solid rgba(245, 200, 75, 0.35);
+  border-radius: 8px;
+  padding: 8px 22px;
+  font-size: 1em;
+  font-family: inherit;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.lang-btn:hover:not(:disabled) {
+  border-color: rgba(245, 200, 75, 0.7);
+  color: var(--accent);
+}
+.lang-btn.active {
+  background: rgba(245, 200, 75, 0.18);
+  border-color: rgba(245, 200, 75, 0.75);
+  color: var(--accent);
+  font-weight: 600;
+}
+.lang-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .overlay-hint {
   font-size: 0.9em;
   color: var(--text-dim);

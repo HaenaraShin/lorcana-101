@@ -38,6 +38,7 @@ const factory = new Function('window', `
   ${koSrc}
   ${i18nSrc}
   const t = window.t || ((k) => k);
+  const I18N = window.I18N || { lang: 'ko' };
   ${cardsSrc}
   const CARDS = window.LORCANA_CARDS || {};
   const playBeginPhase = () => {};

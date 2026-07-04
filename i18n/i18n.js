@@ -45,6 +45,17 @@
     },
   };
 
+  /* 언어 선택 버튼(타이틀 페이지, [data-lang]) — 위임 방식이라 오버레이가
+     나중에 innerHTML 로 렌더돼도 동작. 같은 언어 클릭은 무시. */
+  if (typeof document !== 'undefined') {
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest && e.target.closest('[data-lang]');
+      if (!btn || btn.disabled) return;
+      const l = btn.getAttribute('data-lang');
+      if (l && l !== lang) window.I18N.set(l);
+    });
+  }
+
   /* 정적 DOM 텍스트 주입 — index.html 의 [data-i18n](textContent) / [data-i18n-title](title).
      스크립트가 body 끝에서 로드되어 대상 요소는 이미 파싱됨. */
   if (typeof document !== 'undefined') {

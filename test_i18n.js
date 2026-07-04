@@ -47,6 +47,8 @@ function scanJs(file) {
     code = code.replace(/\/\/.*$/, '');
     /* PAGES/CHAPTERS 의 label: '...' 값은 허용 → 제거 후 검사 */
     code = code.replace(/label:\s*'[^']*'/g, '').replace(/label:\s*"[^"]*"/g, '');
+    /* 언어 선택 버튼(lang-btn)의 네이티브 언어명(한국어/日本語/준비중)은 의도적 언어중립 — 허용 */
+    if (/lang-btn/.test(code)) return;
     if (han.test(code)) fail(`${file}:${i + 1} 한글 잔존 → ${ln.trim().slice(0, 80)}`);
   });
 }
