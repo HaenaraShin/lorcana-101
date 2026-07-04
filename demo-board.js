@@ -2450,24 +2450,46 @@ async function playDevelopYourBrain() {
     /* face-up 유지 (이미 flipped) */
   });
 
-  /* Scar 는 face-down 으로 돌리고 덱 "바닥(아래)" 으로 빨려들어가는 시각.
-     deck zone 의 하단 모서리로 이동하면서 크기 작아지고 opacity 0 → "덱 맨 아래로" 인상. */
+  /* Scar 는 face-down 으로 돌린 뒤 "덱 맨 아래" 로 들어가는 시각.
+     덱 top 과 동일한 card-back(deckCover)을 Scar flyer 보다 위(z 261)에 덮어,
+     Scar(z 260)가 그 뒤로 미끄러져 들어가도록 한다 → 맨 위가 아니라 '밑으로' tuck.
+     (1) 덱 바로 위에 살짝 떠서 또렷이 보임 → (2) 덱 뒤로 내려가며 가려지고 fade. */
   lookR.querySelector('.develop-look-inner').classList.remove('flipped');
+
+  /* (1) 덱 위로 glide — 윗부분이 덱 위로 삐져나온 채 떠 있음 (face-down). */
   requestAnimationFrame(() => {
-    lookR.style.left    = (dRect.left + dRect.width * 0.1) + 'px';
-    lookR.style.top     = (dRect.bottom - dRect.height * 0.15) + 'px'; /* deck 아래쪽 */
-    lookR.style.width   = (dRect.width * 0.8) + 'px';
-    lookR.style.height  = (dRect.height * 0.18) + 'px'; /* 납작하게 */
-    lookR.style.opacity = '0';
+    lookR.style.left    = dRect.left + 'px';
+    lookR.style.top     = (dRect.top - dRect.height * 0.45) + 'px';
+    lookR.style.width   = dRect.width + 'px';
+    lookR.style.height  = dRect.height + 'px';
+    lookR.style.opacity = '1';
   });
 
   /* 액션 카드 자체는 discard 로 fade-out. */
   actionFlyer.classList.add('develop-action-fade');
 
-  await sleep(1000);
+  await sleep(650);
+
+  /* (2) 덱 top card-back 을 Scar 위에 덮어씌운다 (동일 아트라 seam 없음). */
+  const deckCover = document.createElement('div');
+  deckCover.className = 'card-back develop-deck-cover';
+  deckCover.style.left   = dRect.left + 'px';
+  deckCover.style.top    = dRect.top + 'px';
+  deckCover.style.width  = dRect.width + 'px';
+  deckCover.style.height = dRect.height + 'px';
+  document.body.appendChild(deckCover);
+
+  /* Scar 를 덱 위치로 내려 cover 뒤로 사라지게 + fade → '덱 맨 아래로'. */
+  requestAnimationFrame(() => {
+    lookR.style.top     = dRect.top + 'px';
+    lookR.style.opacity = '0';
+  });
+
+  await sleep(600);
   newMulanEl.classList.remove('incoming');
   lookL.remove();
   lookR.remove();
+  deckCover.remove();
   actionFlyer.remove();
 
   /* 액션 카드가 discard 로 간 시점 — discard 영역에 룰 안내 말풍선.
@@ -2610,7 +2632,7 @@ function drawLoreArrow(sx, sy, dx, dy) {
 function setupFinalBoardState() {
   STATE.self.lore = 14;
   STATE.self.hand = ['character_jasmine_resourceful', 'song_spooky'];
-  STATE.self.inkwell = Array.from({ length: 10 }, () => ({ exerted: false }));
+  STATE.self.inkwell = Array.from({ length: 8 }, () => ({ exerted: false }));
   STATE.self.play = [
     { card: 'character_aurora_dream',  exerted: true,  damage: 2 },
     { card: 'character_moana_curious', exerted: true,  damage: 1 },
@@ -2624,7 +2646,6 @@ function setupFinalBoardState() {
   STATE.opp.inkwell = Array.from({ length: 7 }, () => ({ exerted: false }));
   STATE.opp.play = [
     { card: 'character_stitch_rockstar',  exerted: true, damage: 0 },
-    { card: 'character_vanellope_champ',  exerted: true, damage: 0 },
     { card: 'character_rex_dinosaur',     exerted: true, damage: 0 },
     { card: 'character_stitch_trickster', exerted: true, damage: 0 },
   ];

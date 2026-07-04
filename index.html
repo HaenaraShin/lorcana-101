@@ -72,28 +72,6 @@
     <div class="lore-divider-gap"></div>
     <div class="lore-block self-lore-block">
       <div class="lore-diamond"><span class="lore-num" id="self-lore-num">0</span></div>
-      <!-- ============== Page Controls (우측 컬럼 하단에 layout flow로) ============== -->
-      <div class="page-controls">
-        <input type="range" class="page-slider" id="page-slider" min="0" max="0" value="0" disabled>
-        <div class="page-info">
-          <span id="page-current">1</span> <span class="page-info-sep">/</span> <span id="page-total">1</span>
-          <span class="page-info-label" id="page-label"></span>
-        </div>
-        <div class="page-btn-row">
-          <button class="page-btn page-btn-prev" id="btn-prev-page" disabled title="이전 (Backspace · ← · ↑ · PageUp)">← 이전</button>
-          <button class="page-btn page-btn-next" id="btn-next-page" title="다음 (Space · → · ↓ · PageDown)">→ 다음</button>
-        </div>
-        <div class="page-toggles">
-          <label><input type="checkbox" id="toggle-subtitle" checked> 자막</label>
-          <label><input type="checkbox" id="toggle-dialog" checked> 말풍선</label>
-        </div>
-        <div class="page-fontsize" title="설명/자막/말풍선 글자 크기">
-          <span class="fs-label">글자</span>
-          <button class="fs-btn" id="fs-dec" title="작게 (−)">A−</button>
-          <span class="fs-display" id="fs-display">16</span>
-          <button class="fs-btn" id="fs-inc" title="크게 (+)">A+</button>
-        </div>
-      </div>
     </div>
   </aside>
 
@@ -114,6 +92,29 @@
 <!-- ============== Scenario Overlay (intro 페이지 위 어두운 layer) ============== -->
 <div class="scenario-overlay" id="overlay">
   <div class="overlay-content" id="overlay-content"></div>
+</div>
+
+<!-- ============== Page Controls (우측 하단 고정 메뉴바 — overlay 포함 모든 페이지에서 보임) ============== -->
+<div class="page-controls">
+  <input type="range" class="page-slider" id="page-slider" min="0" max="0" value="0" disabled>
+  <div class="page-info">
+    <span id="page-current">1</span> <span class="page-info-sep">/</span> <span id="page-total">1</span>
+    <span class="page-info-label" id="page-label"></span>
+  </div>
+  <div class="page-btn-row">
+    <button class="page-btn page-btn-prev" id="btn-prev-page" disabled title="이전 (Backspace · ← · ↑ · PageUp)">← 이전</button>
+    <button class="page-btn page-btn-next" id="btn-next-page" title="다음 (Space · → · ↓ · PageDown)">→ 다음</button>
+  </div>
+  <div class="page-toggles">
+    <label><input type="checkbox" id="toggle-subtitle" checked> 자막</label>
+    <label><input type="checkbox" id="toggle-dialog" checked> 말풍선</label>
+  </div>
+  <div class="page-fontsize" title="설명/자막/말풍선 글자 크기">
+    <span class="fs-label">글자</span>
+    <button class="fs-btn" id="fs-dec" title="작게 (−)">A−</button>
+    <span class="fs-display" id="fs-display">16</span>
+    <button class="fs-btn" id="fs-inc" title="크게 (+)">A+</button>
+  </div>
 </div>
 
 <script src="cards.js"></script>
