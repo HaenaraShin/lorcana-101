@@ -568,6 +568,10 @@ const PAGES = [
   { id: 'p2-world',         type: 'intro', kind: 'world',         label: '세계관' },
   { id: 'p3-ink-colors',    type: 'intro', kind: 'ink-colors',    label: '잉크 컬러' },
   { id: 'p4-anatomy',       type: 'intro', kind: 'card-anatomy',  label: '카드 한 장 들여다보기', cardKey: 'character_mickey_true_friend' },
+  /* 카드 종류 — 캐릭터(위 p4-anatomy)에 이어 액션·아이템·로케이션을 연이어 설명 */
+  { id: 'p-action-brief-t3',type: 'intro', kind: 'action-brief',   label: '액션' },
+  { id: 'p-item-brief',     type: 'intro', kind: 'item-brief',     label: '아이템' },
+  { id: 'p-location-brief', type: 'intro', kind: 'location-brief', label: '로케이션' },
   { id: 'p5-board-intro',   type: 'sim',   label: '🗺 보드 소개',                                fn: () => playBoardIntro() },
   { id: 'p6-transition',    type: 'intro', kind: 'transition',    label: '전환',
     title: '그럼 실제로 게임을<br>진행하면서 배워볼까요?' },
@@ -629,7 +633,6 @@ const PAGES = [
         applyToggles();
       }
     } },
-  { id: 'p-action-brief-t3',          type: 'intro', kind: 'action-brief', label: '액션 (T3 설명)' },
   { id: 'sim-t3-develop',             type: 'sim', label: '✨ T3 Develop Your Brain 발동',     fn: () => playDevelopYourBrain() },
   { id: 'sim-t3-pete-ink',            type: 'sim', label: '💧 T3 잉크 추가 (Pete)',
     fn: async () => {
@@ -674,10 +677,7 @@ const PAGES = [
   { id: 'p-sing-brief',               type: 'intro', kind: 'sing-brief', label: 'Sing(노래) 설명' },
   { id: 'sim-t7-letitgo',             type: 'sim', label: '🎵 T7 Let It Go (Sing)',             fn: () => playLetItGo() },
   { id: 'sim-t7-jasmine-play',        type: 'sim', label: '👸 T7 Jasmine 플레이 (비용 4)',      fn: () => playCard('self', 'character_jasmine_strategist') },
-  /* ----- CLOSING — additional rule briefs.
-     액션 설명은 T3 (p-action-brief-t3) 에서 이미 진행했으므로 closing 에서는 중복 생략. */
-  { id: 'p-item-brief',    type: 'intro', kind: 'item-brief',   label: '아이템' },
-  { id: 'p-location-brief',type: 'intro', kind: 'location-brief', label: '로케이션' },
+  /* 카드 종류(액션·아이템·로케이션) 설명은 도입부 p4-anatomy 뒤로 이동함. */
   /* ----- FINALE — last-turn jump → victory condition → win ----- */
   { id: 'p-finale-excuse', type: 'intro', kind: 'finale-excuse', label: '마지막 턴 안내' },
   { id: 'sim-finale-jump', type: 'sim',   label: '⏱ 마지막 턴으로 점프',   fn: () => playFinaleJump() },
@@ -703,7 +703,7 @@ const CHAPTERS = [
   { id: 'sim-t6-begin',       label: 'T6' },
   { id: 'sim-t7-begin',       label: 'T7' },
   { id: 'p-finale-excuse',    label: '마지막 턴' },
-  { id: 'p-item-brief',       label: '마무리' },
+  { id: 'p-deck-brief',       label: '마무리' },
 ].map(c => ({ ...c, pageIndex: PAGES.findIndex(p => p.id === c.id) }))
  .filter(c => c.pageIndex >= 0);
 
@@ -1130,7 +1130,7 @@ function renderIntroHTML(page) {
     return `
       <div class="overlay-section cost-exert">
         <h2 class="overlay-section-title">잉크 비용 지불</h2>
-        <p class="cost-exert-desc">카드를 플레이하려면, 그 카드의 <strong>잉크 비용</strong>만큼 자신의 잉크를 <strong>Exert</strong>합니다.</p>
+        <p class="cost-exert-desc">카드를 플레이하려면, 그 카드의 <strong>잉크 비용</strong>만큼 자신의 잉크를 <strong>Exert</strong>합니다.<br>이렇게 잉크를 지불하고 카드를 보드에 내는 행위를 <strong>'play'</strong>한다고 표현합니다.</p>
         <div class="cost-exert-grid">
           <div class="cost-exert-item">
             <img class="cost-exert-card" src="${c1.image}" alt="${c1.fullName}">
