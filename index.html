@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Disney Lorcana 입문 101 — 강습회</title>
+  <title>Disney Lorcana 101</title>
   <link rel="stylesheet" href="demo-board.css">
 </head>
 <body>
@@ -102,21 +102,24 @@
     <span class="page-info-label" id="page-label"></span>
   </div>
   <div class="page-btn-row">
-    <button class="page-btn page-btn-prev" id="btn-prev-page" disabled title="이전 (Backspace · ← · ↑ · PageUp)">← 이전</button>
-    <button class="page-btn page-btn-next" id="btn-next-page" title="다음 (Space · → · ↓ · PageDown)">→ 다음</button>
+    <button class="page-btn page-btn-prev" id="btn-prev-page" disabled data-i18n="ui.prev" data-i18n-title="ui.prevTip"></button>
+    <button class="page-btn page-btn-next" id="btn-next-page" data-i18n="ui.next" data-i18n-title="ui.nextTip"></button>
   </div>
   <div class="page-toggles">
-    <label><input type="checkbox" id="toggle-subtitle" checked> 자막</label>
-    <label><input type="checkbox" id="toggle-dialog" checked> 말풍선</label>
+    <label><input type="checkbox" id="toggle-subtitle" checked> <span data-i18n="ui.subtitle"></span></label>
+    <label><input type="checkbox" id="toggle-dialog" checked> <span data-i18n="ui.dialog"></span></label>
   </div>
-  <div class="page-fontsize" title="설명/자막/말풍선 글자 크기">
-    <span class="fs-label">글자</span>
-    <button class="fs-btn" id="fs-dec" title="작게 (−)">A−</button>
+  <div class="page-fontsize" data-i18n-title="ui.fontTip">
+    <span class="fs-label" data-i18n="ui.font"></span>
+    <button class="fs-btn" id="fs-dec" data-i18n-title="ui.fontDecTip">A−</button>
     <span class="fs-display" id="fs-display">16</span>
-    <button class="fs-btn" id="fs-inc" title="크게 (+)">A+</button>
+    <button class="fs-btn" id="fs-inc" data-i18n-title="ui.fontIncTip">A+</button>
   </div>
 </div>
 
+<script src="i18n/ko.js"></script>
+<script src="i18n/en.js"></script>
+<script src="i18n/i18n.js"></script>
 <script src="cards.js"></script>
 <script src="demo-board.js"></script>
 </body>

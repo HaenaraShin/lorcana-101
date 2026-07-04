@@ -508,13 +508,13 @@ async function playBeginPhase() {
   // T1 — first player skips begin phase entirely (Lorcana rule: no draw on T1).
   if (currentTurn === 1) {
     setSubtitle(
-      `T1 / ${activeName}의 턴 시작`,
-      `선공은 첫 턴의 <strong>비기닝 페이즈를 건너뜁니다</strong> (드로우 없음). 곧바로 메인 페이즈로 진입합니다.`
+      t('subtitle.turnStartT1.step', { name: activeName }),
+      t('subtitle.turnStartT1.body')
     );
     return;
   }
 
-  setSubtitle(`T${currentTurn} / ${activeName}의 비기닝 페이즈`, `READY → SET → DRAW 순으로 진행됩니다.`);
+  setSubtitle(t('subtitle.beginPhase.step', { turn: currentTurn, name: activeName }), t('subtitle.beginPhase.body'));
 
   // READY
   showBadge('READY');
@@ -527,7 +527,7 @@ async function playBeginPhase() {
       && STATE.self.play.some(p => p.card === 'sim_robin_beloved')) {
     DIALOGS.push({
       side: 'self', cardKey: 'sim_robin_beloved', tag: 'ink-dried',
-      text: '한 턴이 지나 잉크가 말라서<br>이제 퀘스트할 수 있어요!',
+      text: t('dialog.inkDried'),
       tail: 'tail-up',
       offset: { x: -10, y: 240 },
       placement: 'below',
@@ -573,18 +573,10 @@ const PAGES = [
   { id: 'p-item-brief',     type: 'intro', kind: 'item-brief',     label: '아이템' },
   { id: 'p-location-brief', type: 'intro', kind: 'location-brief', label: '로케이션' },
   { id: 'p5-board-intro',   type: 'sim',   label: '🗺 보드 소개',                                fn: () => playBoardIntro() },
-  { id: 'p6-transition',    type: 'intro', kind: 'transition',    label: '전환',
-    title: '그럼 실제로 게임을<br>진행하면서 배워볼까요?' },
-  { id: 'p7-game-start',    type: 'intro', kind: 'transition',    label: '게임 시작',
-    title: '게임 시작!',
-    description: '이제 게임을 시작해볼까요?<br>가위바위보나 주사위를 던져 이긴 사람이 선/후공을 정합니다.<br><br>설명을 위해 <strong>나의 선공</strong>으로 게임을 시작해봅시다.' },
+  { id: 'p6-transition',    type: 'intro', kind: 'transition',    label: '전환' },
+  { id: 'p7-game-start',    type: 'intro', kind: 'transition',    label: '게임 시작' },
   { id: 'sim-game-start',   type: 'sim',   label: '🎲 게임 시작 (주사위 + 7장 드로우)', fn: () => playGameStart() },
-  { id: 'p8-mulligan-brief',type: 'intro', kind: 'transition',    label: '멀리건 안내',
-    title: '멀리건',
-    description: `초기 핸드 7장을 받은 뒤, 게임 시작 전 <strong class="hl">단 1회</strong>에 한해 마음에 들지 않는 카드를 골라 <strong>덱 밑으로 되돌릴 수</strong> 있습니다.<br>
-되돌린 만큼 다시 7장이 되도록 <strong>새 카드를 드로우</strong>합니다.<br>
-이후 덱을 잘 <strong>셔플</strong>하여 게임을 시작합니다.<br><br>
-초반 잉크 카드와 핵심 캐릭터의 균형을 잡는 중요한 결정입니다.` },
+  { id: 'p8-mulligan-brief',type: 'intro', kind: 'transition',    label: '멀리건 안내' },
   /* ----- SIM ----- */
   { id: 'sim-mulligan',               type: 'sim', label: '🤝 멀리건',                          fn: () => playMulligan() },
   { id: 'sim-t1-begin',               type: 'sim', label: '▶ T1 비기닝 페이즈',
@@ -596,7 +588,7 @@ const PAGES = [
         DIALOGS.push({
           side: 'self', tag: 'first-turn-no-draw',
           zoneSelector: '.self-lr .deck-zone',
-          text: '<strong>선공의 첫 턴</strong>은<br>드로우를 생략합니다',
+          text: t('dialog.firstTurnNoDraw'),
           tail: 'tail-right',
           placement: 'left-of',
         });
@@ -626,7 +618,7 @@ const PAGES = [
       if (!DIALOGS.some(d => d.cardKey === 'sim_pluto' && d.tag === 'ready-untargetable')) {
         DIALOGS.push({
           side: 'opp', cardKey: 'sim_pluto', tag: 'ready-untargetable',
-          text: '<strong>Ready</strong> 상태이므로<br>챌린지의 대상이 되지 않습니다',
+          text: t('dialog.readyUntargetable'),
           tail: 'tail-down',
           offset: { x: -10, y: -55 },
         });
@@ -799,10 +791,10 @@ function renderIntroHTML(page) {
         <img class="overlay-banner" src="res/title.png" alt="Disney Lorcana">
         <h1 class="overlay-title">Disney Lorcana Guide</h1>
         <p class="overlay-subtitle">How to play</p>
-        <p class="overlay-description">디즈니 로카나 플레이방법을 배워봅시다!</p>
+        <p class="overlay-description">${t('intro.title.desc')}</p>
         <p class="overlay-hint">
-          <kbd>Space</kbd> / <kbd>→</kbd> 다음 ·
-          <kbd>Backspace</kbd> / <kbd>←</kbd> 이전
+          <kbd>Space</kbd> / <kbd>→</kbd> ${t('intro.title.next')} ·
+          <kbd>Backspace</kbd> / <kbd>←</kbd> ${t('intro.title.prev')}
         </p>
       </div>`;
   }
@@ -811,90 +803,83 @@ function renderIntroHTML(page) {
       <div class="overlay-world">
         <img class="overlay-world-img" src="res/illumineer.webp" alt="Illumineer">
         <div class="overlay-world-text">
-          <h2 class="overlay-section-title">디즈니 로카나의 세계</h2>
-          <p>디즈니 로카나는 <strong>마법의 잉크</strong>로 나만의 이야기를 완성해가는 전략 카드 게임입니다.</p>
-          <p>마법 잉크를 다루는 <strong>일루미니어</strong>가 되어 디즈니 세계의 영웅들과 함께 스릴 넘치는 도전과 모험을 경험하세요.</p>
-          <p>그리고 이야기 조각을 모아 <strong>승리</strong>하세요!</p>
+          <h2 class="overlay-section-title">${t('intro.world.title')}</h2>
+          <p>${t('intro.world.p1')}</p>
+          <p>${t('intro.world.p2')}</p>
+          <p>${t('intro.world.p3')}</p>
         </div>
       </div>`;
   }
   if (page.kind === 'ink-colors') {
     return `
       <div class="overlay-ink-section">
-        <h2 class="overlay-section-title">6가지 잉크 컬러</h2>
+        <h2 class="overlay-section-title">${t('intro.ink-colors.title')}</h2>
         <div class="ink-hex">
           <div class="ink-slot ink-amber">
             <img src="res/dlc_ink_amber.png" alt="Amber">
-            <div class="ink-bubble"><strong>Amber</strong><br>회복 + 노래</div>
+            <div class="ink-bubble"><strong>Amber</strong><br>${t('intro.ink-colors.amber')}</div>
           </div>
           <div class="ink-slot ink-amethyst">
             <img src="res/dlc_ink_amethyst.png" alt="Amethyst">
-            <div class="ink-bubble"><strong>Amethyst</strong><br>마법 + 조작</div>
+            <div class="ink-bubble"><strong>Amethyst</strong><br>${t('intro.ink-colors.amethyst')}</div>
           </div>
           <div class="ink-slot ink-emerald">
             <img src="res/dlc_ink_emerald.png" alt="Emerald">
-            <div class="ink-bubble"><strong>Emerald</strong><br>트릭 + 교란</div>
+            <div class="ink-bubble"><strong>Emerald</strong><br>${t('intro.ink-colors.emerald')}</div>
           </div>
           <div class="ink-slot ink-ruby">
             <img src="res/dlc_ink_ruby.png" alt="Ruby">
-            <div class="ink-bubble"><strong>Ruby</strong><br>전투 + 제거</div>
+            <div class="ink-bubble"><strong>Ruby</strong><br>${t('intro.ink-colors.ruby')}</div>
           </div>
           <div class="ink-slot ink-sapphire">
             <img src="res/dlc_ink_sapphire.png" alt="Sapphire">
-            <div class="ink-bubble"><strong>Sapphire</strong><br>지식 + 축적</div>
+            <div class="ink-bubble"><strong>Sapphire</strong><br>${t('intro.ink-colors.sapphire')}</div>
           </div>
           <div class="ink-slot ink-steel">
             <img src="res/dlc_ink_steel.png" alt="Steel">
-            <div class="ink-bubble"><strong>Steel</strong><br>저항 + 공격</div>
+            <div class="ink-bubble"><strong>Steel</strong><br>${t('intro.ink-colors.steel')}</div>
           </div>
-          <p class="overlay-tagline">특성을 살리고 조합하여<br>나만의 덱을 구축하자!</p>
+          <p class="overlay-tagline">${t('intro.ink-colors.tagline')}</p>
         </div>
       </div>`;
   }
   if (page.kind === 'card-anatomy') {
     const card = CARDS[page.cardKey];
-    if (!card) return '<div class="overlay-section"><p>카드를 찾을 수 없습니다.</p></div>';
+    if (!card) return `<div class="overlay-section"><p>${t('intro.card-anatomy.notFound')}</p></div>`;
     return `
       <div class="card-anatomy">
         <img class="card-anatomy-img" decoding="async" src="${card.image}" alt="${card.fullName}">
-        <div class="callout c-cost"><strong>잉크 비용</strong><br>이 카드를 플레이하는 데 필요한 잉크 수<br>— 이 카드는 <strong>${card.cost}</strong></div>
-        <div class="callout c-name-version">
-          <strong>이름 · <em>${card.name}</em></strong><br>
-          <small>같은 이름은 한 덱에 4장까지</small><br>
-          <strong>버전 · <em>"${card.version}"</em></strong><br>
-          <small>같은 캐릭터의 다른 모습/스탯</small>
-        </div>
-        <div class="callout c-stats">
-          <strong>힘 ¤ ${card.strength}</strong> <small>챌린지 시 주는 데미지</small><br>
-          <strong>의지력 ⛉ ${card.willpower}</strong> <small>받을 수 있는 데미지 한계 (초과 시 banish)</small>
-        </div>
-        <div class="callout c-lore"><strong>로어 ◆ ${card.lore}</strong><br>이 캐릭터로 퀘스트할 때 얻는 Lore 점수</div>
+        <div class="callout c-cost">${t('intro.card-anatomy.cost', { cost: card.cost })}</div>
+        <div class="callout c-name-version">${t('intro.card-anatomy.nameVersion', { name: card.name, version: card.version })}</div>
+        <div class="callout c-stats">${t('intro.card-anatomy.stats', { strength: card.strength, willpower: card.willpower })}</div>
+        <div class="callout c-lore">${t('intro.card-anatomy.lore', { lore: card.lore })}</div>
       </div>`;
   }
   if (page.kind === 'ink-rules') {
     return `
       <div class="overlay-section ink-rules">
-        <h2 class="overlay-section-title">잉크 추가</h2>
+        <h2 class="overlay-section-title">${t('intro.ink-rules.title')}</h2>
         <div class="ink-rules-pair">
           <div class="ink-rule">
-            <img src="res/inkable.png" alt="잉크 가능">
-            <div class="ink-rule-label">잉크 가능</div>
+            <img src="res/inkable.png" alt="${t('intro.ink-rules.inkable')}">
+            <div class="ink-rule-label">${t('intro.ink-rules.inkable')}</div>
           </div>
           <div class="ink-rule">
-            <img src="res/uninkable.png" alt="잉크 불가능">
-            <div class="ink-rule-label">잉크 불가능</div>
+            <img src="res/uninkable.png" alt="${t('intro.ink-rules.uninkable')}">
+            <div class="ink-rule-label">${t('intro.ink-rules.uninkable')}</div>
           </div>
         </div>
-        <p><strong class="hl">한 턴에 한 번</strong>, 잉크 가능한 카드를 뒷면으로 잉크웰에 놓을 수 있습니다.</p>
-        <p>이때 상대에게 <strong>잉크 가능한 카드임을 확인</strong>시켜주어야 합니다.</p>
-        <p>자신의 턴 중이라면 <strong>언제든</strong> 넣을 수 있습니다.</p>
+        <p>${t('intro.ink-rules.p1')}</p>
+        <p>${t('intro.ink-rules.p2')}</p>
+        <p>${t('intro.ink-rules.p3')}</p>
       </div>`;
   }
   if (page.kind === 'transition') {
+    const desc = t('page.' + page.id + '.description');
     return `
       <div class="overlay-title-block">
-        <h1 class="overlay-title">${page.title || ''}</h1>
-        ${page.description ? `<p class="overlay-description">${page.description}</p>` : ''}
+        <h1 class="overlay-title">${t('page.' + page.id + '.title')}</h1>
+        ${desc ? `<p class="overlay-description">${desc}</p>` : ''}
       </div>`;
   }
   if (page.kind === 'challenge-brief') {
@@ -902,27 +887,23 @@ function renderIntroHTML(page) {
     const defender = CARDS['sim_rajah'];
     return `
       <div class="overlay-section challenge-brief">
-        <h2 class="overlay-section-title">챌린지</h2>
+        <h2 class="overlay-section-title">${t('intro.challenge-brief.title')}</h2>
         <div class="challenge-demo">
           <div class="ch-side ch-attacker">
             <img class="ch-card" src="${attacker.image}" alt="${attacker.fullName}">
             <div class="ch-flash"></div>
             <div class="ch-dmg">${defender.strength}</div>
-            <div class="ch-label">공격자 — Exert</div>
+            <div class="ch-label">${t('intro.challenge-brief.attackerLabel')}</div>
           </div>
           <div class="ch-arrow"></div>
           <div class="ch-side ch-defender">
             <img class="ch-card ch-card-static" src="${defender.image}" alt="${defender.fullName}">
             <div class="ch-flash"></div>
             <div class="ch-dmg">${attacker.strength}</div>
-            <div class="ch-label">방어자</div>
+            <div class="ch-label">${t('intro.challenge-brief.defenderLabel')}</div>
           </div>
         </div>
-        <p class="challenge-desc">
-          자신의 <strong>Ready</strong> 상태인 캐릭터를 <strong>Exert</strong>하여 상대 캐릭터에게 챌린지를 선언합니다.<br>
-          서로의 <strong>공격력(¤)</strong>만큼 데미지를 주고받고, 받은 데미지가 <strong>의지력(⛉)</strong> 이상이 되면 <strong class="hl">banish</strong>됩니다.<br>
-          상대의 <strong>Ready</strong> 상태 캐릭터는 챌린지 대상이 될 수 없습니다.
-        </p>
+        <p class="challenge-desc">${t('intro.challenge-brief.desc')}</p>
       </div>`;
   }
   if (page.kind === 'action-brief') {
@@ -930,60 +911,43 @@ function renderIntroHTML(page) {
     const s = CARDS['song_letitgo'];
     return `
       <div class="overlay-section closing-brief">
-        <h2 class="overlay-section-title">액션 (Action)</h2>
+        <h2 class="overlay-section-title">${t('intro.action-brief.title')}</h2>
         <div class="closing-card-row two">
           <img class="closing-card-img" src="${a.image}" alt="${a.fullName}">
           <img class="closing-card-img" src="${s.image}" alt="${s.fullName}">
         </div>
-        <p class="closing-desc">
-          <strong>액션</strong> 카드는 잉크 비용을 지불해 즉발적인 효과를 발동시키고
-          곧바로 <strong>discard</strong>로 들어가는 강력한 카드입니다.<br>
-          <strong>Song(노래)</strong>은 액션의 한 종류이지만 캐릭터가 부르는 것으로
-          <strong class="hl">잉크를 지불하지 않고</strong> 발동할 수 있습니다.
-        </p>
+        <p class="closing-desc">${t('intro.action-brief.desc')}</p>
       </div>`;
   }
   if (page.kind === 'item-brief') {
     const it = CARDS['item_lantern'];
     return `
       <div class="overlay-section closing-brief">
-        <h2 class="overlay-section-title">아이템 (Item)</h2>
+        <h2 class="overlay-section-title">${t('intro.item-brief.title')}</h2>
         <div class="closing-card-row one">
           <img class="closing-card-img" src="${it.image}" alt="${it.fullName}">
         </div>
-        <p class="closing-desc">
-          <strong>아이템</strong>은 Play Area에 남아 <strong>영속적인 효과나 어빌리티</strong>를 제공합니다.<br>
-          캐릭터와 달리 <strong class="hl">잉크가 마르기를 기다릴 필요 없이</strong>,
-          플레이한 턴부터 효과·어빌리티를 곧바로 사용할 수 있습니다.
-        </p>
+        <p class="closing-desc">${t('intro.item-brief.desc')}</p>
       </div>`;
   }
   if (page.kind === 'location-brief') {
     const loc = CARDS['location_abandoned_lab'];
     return `
       <div class="overlay-section closing-brief">
-        <h2 class="overlay-section-title">로케이션 (Location)</h2>
+        <h2 class="overlay-section-title">${t('intro.location-brief.title')}</h2>
         <div class="closing-card-row one">
           <div class="loc-frame">
             <img class="closing-card-img location-card" src="${loc.image}" alt="${loc.fullName}">
           </div>
         </div>
-        <p class="closing-desc">
-          <strong>로케이션</strong>은 잉크 비용을 지불해 플레이합니다.
-          이후 캐릭터가 좌측의 <strong>이동 비용(Move Cost)</strong>을 지불하면
-          그 로케이션으로 이동해 효과를 적용받습니다.<br>
-          로케이션 자체도 <strong>챌린지의 대상</strong>이 될 수 있고,
-          받은 데미지가 의지력(⛉)을 넘으면 <strong class="hl">banish</strong>됩니다.<br>
-          자신의 비기닝 페이즈 <strong>SET</strong> 단계에 로케이션 위에 표시된
-          <strong>로어(◆)</strong>만큼 자동으로 Lore를 얻습니다.
-        </p>
+        <p class="closing-desc">${t('intro.location-brief.desc')}</p>
       </div>`;
   }
   if (page.kind === 'finale-excuse') {
     return `
       <div class="overlay-title-block finale-excuse-block">
-        <h1 class="overlay-title finale-excuse-title">여러 턴 뒤 —</h1>
-        <p class="overlay-subtitle finale-excuse-sub">Player A의 <strong>마지막 턴</strong>.</p>
+        <h1 class="overlay-title finale-excuse-title">${t('intro.finale-excuse.title')}</h1>
+        <p class="overlay-subtitle finale-excuse-sub">${t('intro.finale-excuse.sub')}</p>
       </div>`;
   }
   if (page.kind === 'victory-rule') {
@@ -991,7 +955,7 @@ function renderIntroHTML(page) {
     const sampleImg = sample?.image || 'card_back.jpeg';
     return `
       <div class="overlay-section closing-brief victory-rule">
-        <h2 class="overlay-section-title">승리 조건</h2>
+        <h2 class="overlay-section-title">${t('intro.victory-rule.title')}</h2>
         <div class="vr-anim">
           <div class="vr-card-wrap">
             <img class="vr-card" src="${sampleImg}" alt="quest demo">
@@ -1007,36 +971,31 @@ function renderIntroHTML(page) {
           </div>
           <div class="vr-crown">👑</div>
         </div>
-        <p class="closing-desc victory-rule-headline">
-          먼저 <strong class="hl">Lore 20점</strong>을 모은 플레이어가 <strong>승리</strong>합니다.
-        </p>
+        <p class="closing-desc victory-rule-headline">${t('intro.victory-rule.headline')}</p>
         <ul class="closing-bullets">
-          <li>캐릭터로 <strong>퀘스트</strong>하면 그 캐릭터의 <strong>◆</strong> 만큼 Lore 획득</li>
-          <li>자신의 비기닝 페이즈 SET 단계에 <strong>로케이션</strong>의 ◆ 만큼 자동 획득</li>
-          <li>일부 카드 <strong>효과</strong>로 추가 Lore 획득 (예: Robin Hood — Champion 챌린지 +2)</li>
+          <li>${t('intro.victory-rule.bullet1')}</li>
+          <li>${t('intro.victory-rule.bullet2')}</li>
+          <li>${t('intro.victory-rule.bullet3')}</li>
         </ul>
       </div>`;
   }
   if (page.kind === 'deck-brief') {
     return `
       <div class="overlay-section closing-brief">
-        <h2 class="overlay-section-title">덱 구성</h2>
+        <h2 class="overlay-section-title">${t('intro.deck-brief.title')}</h2>
         <ul class="closing-bullets">
-          <li>덱은 <strong>최대 2개</strong>의 잉크 색을 조합해 짤 수 있습니다.</li>
-          <li>덱은 <strong class="hl">최소 60장</strong>이어야 합니다.</li>
-          <li>같은 <strong>이름 + 같은 버전</strong>의 카드는 한 덱에 <strong>최대 4장</strong>까지.</li>
+          <li>${t('intro.deck-brief.bullet1')}</li>
+          <li>${t('intro.deck-brief.bullet2')}</li>
+          <li>${t('intro.deck-brief.bullet3')}</li>
         </ul>
-        <p class="closing-desc">
-          잉크 색의 성격을 살리고, 캐릭터·아이템·노래·로케이션을 균형 있게 섞어<br>
-          <strong>나만의 덱</strong>을 만들어 보세요.
-        </p>
+        <p class="closing-desc">${t('intro.deck-brief.desc')}</p>
       </div>`;
   }
   if (page.kind === 'thanks') {
     return `
       <div class="overlay-title-block">
-        <h1 class="overlay-title">감사합니다.</h1>
-        <p class="overlay-subtitle">Disney Lorcana의 세계로 오신 걸 환영해요</p>
+        <h1 class="overlay-title">${t('intro.thanks.title')}</h1>
+        <p class="overlay-subtitle">${t('intro.thanks.sub')}</p>
       </div>`;
   }
   if (page.kind === 'sing-brief') {
@@ -1045,11 +1004,11 @@ function renderIntroHTML(page) {
     const ink = n => Array.from({ length: n }, () => '<div class="cost-ink-card"></div>').join('');
     return `
       <div class="overlay-section sing-brief">
-        <h2 class="overlay-section-title">Sing (노래 부르기)</h2>
+        <h2 class="overlay-section-title">${t('intro.sing-brief.title')}</h2>
         <div class="sing-pair">
           <div class="sing-item">
             <img class="cost-exert-card" src="${song.image}" alt="${song.fullName}">
-            <div class="cost-exert-label">일반 플레이 — 비용 <strong>${song.cost}</strong></div>
+            <div class="cost-exert-label">${t('intro.sing-brief.normalLabel', { cost: song.cost })}</div>
             <div class="cost-inkwell shift-cost-5">${ink(5)}</div>
           </div>
           <div class="shift-vs">VS</div>
@@ -1058,15 +1017,11 @@ function renderIntroHTML(page) {
               <img class="cost-exert-card sing-singer" src="${robin.image}" alt="${robin.fullName}">
               <img class="cost-exert-card sing-song" src="${song.image}" alt="${song.fullName}">
             </div>
-            <div class="cost-exert-label"><strong>Sing</strong> — 비용 ⓘ <strong>0</strong> 잉크</div>
-            <div class="cost-exert-label sing-sub">캐릭터를 <strong>Exert</strong>합니다.</div>
+            <div class="cost-exert-label">${t('intro.sing-brief.singLabel')}</div>
+            <div class="cost-exert-label sing-sub">${t('intro.sing-brief.singSub')}</div>
           </div>
         </div>
-        <p class="sing-desc">
-          <strong>Song(노래)</strong> 카드는 그 노래의 비용 이상의 캐릭터를 <strong>Exert</strong>하는 것으로<br>
-          잉크를 지불하지 않고 <strong class="hl">"부를(Sing)"</strong> 수 있습니다.<br>
-          노래는 효과가 발동된 뒤 <strong>discard</strong>로 이동합니다.
-        </p>
+        <p class="sing-desc">${t('intro.sing-brief.desc')}</p>
       </div>`;
   }
   if (page.kind === 'shift-brief') {
@@ -1075,13 +1030,13 @@ function renderIntroHTML(page) {
     const ink = n => Array.from({ length: n }, () => '<div class="cost-ink-card"></div>').join('');
     return `
       <div class="overlay-section shift-brief">
-        <h2 class="overlay-section-title">시프트</h2>
+        <h2 class="overlay-section-title">${t('intro.shift-brief.title')}</h2>
         <div class="shift-pair">
           <div class="shift-item">
             <div class="shift-card-zone single">
               <img class="cost-exert-card" src="${champion.image}" alt="${champion.fullName}">
             </div>
-            <div class="cost-exert-label">일반 플레이 — 비용 <strong>5</strong></div>
+            <div class="cost-exert-label">${t('intro.shift-brief.normalLabel')}</div>
             <div class="cost-inkwell shift-cost-5">${ink(5)}</div>
           </div>
           <div class="shift-vs">VS</div>
@@ -1090,21 +1045,18 @@ function renderIntroHTML(page) {
               <img class="cost-exert-card shift-base" src="${beloved.image}" alt="${beloved.fullName}">
               <img class="cost-exert-card shift-top"  src="${champion.image}" alt="${champion.fullName}">
             </div>
-            <div class="cost-exert-label"><strong>Shift</strong> 플레이 — 비용 <strong>3</strong></div>
+            <div class="cost-exert-label">${t('intro.shift-brief.shiftLabel')}</div>
             <div class="cost-inkwell">${ink(3)}</div>
           </div>
         </div>
-        <p class="shift-desc">
-          <strong>Shift</strong> 능력이 있다면 같은 이름의 캐릭터 위에 더 적은 잉크를 지불하고 낼 수도 있습니다.<br>
-          시프트를 하면 캐릭터가 변화한 것으로 취급하여 원래 있던 <strong class="hl">캐릭터의 데미지, 잉크마름 상태까지도 전부 유지</strong>됩니다.
-        </p>
+        <p class="shift-desc">${t('intro.shift-brief.desc')}</p>
       </div>`;
   }
   if (page.kind === 'quest-brief') {
     const robin = CARDS['sim_robin_beloved'];
     return `
       <div class="overlay-section quest-brief">
-        <h2 class="overlay-section-title">퀘스트</h2>
+        <h2 class="overlay-section-title">${t('intro.quest-brief.title')}</h2>
         <div class="quest-demo">
           <div class="quest-demo-card-zone">
             <img class="quest-demo-card" src="${robin.image}" alt="${robin.fullName}">
@@ -1116,11 +1068,7 @@ function renderIntroHTML(page) {
             <span class="quest-num quest-num-1">1</span>
           </div>
         </div>
-        <p class="quest-desc">
-          잉크가 마른 캐릭터를 <strong>Exert</strong>하는 것으로 <strong>퀘스트</strong>를 선언할 수 있습니다.<br>
-          퀘스트를 하면 플레이어의 로어 카운트가 캐릭터의 로어 밸류만큼 오릅니다.<br><br>
-          <strong class="hl">이 로어 카운트가 20이 되면 게임에서 승리합니다.</strong>
-        </p>
+        <p class="quest-desc">${t('intro.quest-brief.desc')}</p>
       </div>`;
   }
   if (page.kind === 'cost-exert') {
@@ -1129,17 +1077,17 @@ function renderIntroHTML(page) {
     const inksFor = n => Array.from({ length: n }, () => '<div class="cost-ink-card"></div>').join('');
     return `
       <div class="overlay-section cost-exert">
-        <h2 class="overlay-section-title">잉크 비용 지불</h2>
-        <p class="cost-exert-desc">카드를 플레이하려면, 그 카드의 <strong>잉크 비용</strong>만큼 자신의 잉크를 <strong>Exert</strong>합니다.<br>이렇게 잉크를 지불하고 카드를 보드에 내는 행위를 <strong>'play'</strong>한다고 표현합니다.</p>
+        <h2 class="overlay-section-title">${t('intro.cost-exert.title')}</h2>
+        <p class="cost-exert-desc">${t('intro.cost-exert.desc')}</p>
         <div class="cost-exert-grid">
           <div class="cost-exert-item">
             <img class="cost-exert-card" src="${c1.image}" alt="${c1.fullName}">
-            <div class="cost-exert-label">비용 <strong>${c1.cost}</strong></div>
+            <div class="cost-exert-label">${t('intro.cost-exert.costLabel', { cost: c1.cost })}</div>
             <div class="cost-inkwell">${inksFor(c1.cost)}</div>
           </div>
           <div class="cost-exert-item">
             <img class="cost-exert-card" src="${c2.image}" alt="${c2.fullName}">
-            <div class="cost-exert-label">비용 <strong>${c2.cost}</strong></div>
+            <div class="cost-exert-label">${t('intro.cost-exert.costLabel', { cost: c2.cost })}</div>
             <div class="cost-inkwell">${inksFor(c2.cost)}</div>
           </div>
         </div>
@@ -1152,47 +1100,41 @@ function renderIntroHTML(page) {
     const robinImg = robin?.image || 'card_back.jpeg';
     return `
       <div class="overlay-section begin-brief">
-        <h2 class="overlay-section-title">비기닝 페이즈</h2>
-        <p class="overlay-section-sub">내 턴이 시작될 때 진행하는 <strong>READY → SET → DRAW</strong> 3단계</p>
+        <h2 class="overlay-section-title">${t('intro.begin-brief.title')}</h2>
+        <p class="overlay-section-sub">${t('intro.begin-brief.sub')}</p>
         <div class="begin-phases">
           <div class="begin-phase phase-ready">
             <div class="phase-step">1</div>
             <h3>READY</h3>
-            <p>내 모든 <strong>캐릭터와 잉크</strong>를<br>Ready(세로) 상태로 복귀</p>
+            <p>${t('intro.begin-brief.readyText')}</p>
             <div class="begin-ready-demo">
               <div class="ready-demo-item">
                 <div class="ready-demo-char" style="background-image: url('${robinImg}');"></div>
-                <div class="ready-demo-tag">캐릭터</div>
+                <div class="ready-demo-tag">${t('intro.begin-brief.readyTagChar')}</div>
               </div>
               <div class="ready-demo-item">
                 <div class="ready-demo-ink"></div>
-                <div class="ready-demo-tag">잉크</div>
+                <div class="ready-demo-tag">${t('intro.begin-brief.readyTagInk')}</div>
               </div>
             </div>
-            <p class="begin-card-caption begin-ready-note">
-              <strong>Exert(가로)</strong> 상태의 플레이 중인 카드와 잉크를<br>
-              모두 <strong>Ready(세로)</strong> 상태로 되돌립니다
-            </p>
+            <p class="begin-card-caption begin-ready-note">${t('intro.begin-brief.readyNote')}</p>
           </div>
           <div class="begin-phase phase-set">
             <div class="phase-step">2</div>
             <h3>SET</h3>
-            <p>"<strong>턴이 시작될 때</strong>" 발동하는<br>효과들이 처리됩니다</p>
+            <p>${t('intro.begin-brief.setText')}</p>
             <img src="${jjImg}" alt="Jack-Jack Parr - Incredible Potential" class="begin-card-example begin-card-glow" decoding="async">
-            <p class="begin-card-caption">예: <em>Jack-Jack Parr — Incredible Potential</em><br>"<strong>At the start of your turn,</strong> you may put the top card of your deck into your discard..."</p>
+            <p class="begin-card-caption">${t('intro.begin-brief.setCaption')}</p>
           </div>
           <div class="begin-phase phase-draw">
             <div class="phase-step">3</div>
             <h3>DRAW</h3>
-            <p>덱에서 카드 <strong>1장</strong>을<br>핸드로 드로우합니다</p>
+            <p>${t('intro.begin-brief.drawText')}</p>
             <div class="begin-draw-demo">
               <div class="begin-deck"><div class="card-back deck-back"></div></div>
               <div class="begin-draw-card"><div class="card-back deck-back"></div></div>
             </div>
-            <p class="begin-card-caption begin-draw-note">
-              단, <strong>선공의 첫 턴</strong>에는 드로우하지 않고<br>
-              <strong>후공의 첫 턴부터</strong> 드로우를 진행합니다
-            </p>
+            <p class="begin-card-caption begin-draw-note">${t('intro.begin-brief.drawNote')}</p>
           </div>
         </div>
       </div>`;
@@ -1205,17 +1147,14 @@ function renderIntroHTML(page) {
         <div class="ready-exert-pair">
           <div class="re-state">
             <img src="${card.image}" alt="Ready" class="re-card">
-            <div class="re-label"><strong>Ready (준비)</strong><br>세로 — 행동 가능</div>
+            <div class="re-label">${t('intro.ready-exert.readyLabel')}</div>
           </div>
           <div class="re-state">
             <img src="${card.image}" alt="Exerted" class="re-card re-exerted">
-            <div class="re-label"><strong>Exerted (사용 후)</strong><br>가로 — 행동 완료</div>
+            <div class="re-label">${t('intro.ready-exert.exertedLabel')}</div>
           </div>
         </div>
-        <p class="ready-exert-desc">
-          잉크를 지불하거나, 퀘스트·챌린지·노래 등 행동을 하면 카드를 <strong>Exert</strong>(가로) 합니다.<br>
-          자신의 비기닝 페이즈에 다시 <strong>Ready</strong>(세로) 상태로 돌아옵니다.
-        </p>
+        <p class="ready-exert-desc">${t('intro.ready-exert.desc')}</p>
       </div>`;
   }
   return '';
@@ -1225,8 +1164,8 @@ function renderIntroHTML(page) {
    inkwell/play, point bubbles at each zone. */
 async function playBoardIntro() {
   setSubtitle(
-    '보드 소개',
-    '로카나에서는 영역이 정확히 나뉘거나 자리가 정해져 있지 않습니다. 각자 편한 대로 배치하셔도 됩니다.'
+    t('subtitle.boardIntro.step'),
+    t('subtitle.boardIntro.body')
   );
   /* hand는 멀리건 직전이라 STATE에는 있지만, 아직 시연 시점이 아님 — 잠시 숨김. */
   const hand = document.getElementById('self-hand');
@@ -1273,11 +1212,11 @@ async function playBoardIntro() {
   /* 4개 영역 말풍선. data-* 부여해서 prev/clear 시 일괄 제거 가능. */
   const zones = [
     /* Deck/Discard는 화면 우측 — 말풍선이 카드의 왼쪽에 위치하고 꼬리는 오른쪽(카드 방향) */
-    { sel: '.self-lr .deck-zone',     text: '<strong>Deck</strong> — 카드를 뽑는 곳',         placement: 'left-of' },
-    { sel: '.self-lr .discard-zone',  text: '<strong>Discard</strong> — 버린 카드 더미',     placement: 'left-of' },
+    { sel: '.self-lr .deck-zone',     text: t('dialog.zoneDeck'),      placement: 'left-of' },
+    { sel: '.self-lr .discard-zone',  text: t('dialog.zoneDiscard'),   placement: 'left-of' },
     /* Play / Inkwell은 위쪽에 말풍선 + 꼬리 아래 */
-    { sel: '#self-play',              text: '<strong>Play Area</strong> — 플레이 중인 캐릭터·아이템·장소', placement: 'above' },
-    { sel: '#self-inkwell',           text: '<strong>Inkwell</strong> — 잉크로 사용 중인 카드', placement: 'above' },
+    { sel: '#self-play',              text: t('dialog.zonePlay'),      placement: 'above' },
+    { sel: '#self-inkwell',           text: t('dialog.zoneInkwell'),   placement: 'above' },
   ];
   for (const z of zones) {
     const target = document.querySelector(z.sel);
@@ -1325,7 +1264,7 @@ function updatePageUI() {
   }
   if (cur) cur.textContent = currentPage + 1;
   if (tot) tot.textContent = PAGES.length;
-  if (label) label.textContent = PAGES[currentPage]?.label || '';
+  if (label) label.textContent = t('pageLabel.' + (PAGES[currentPage]?.id || ''), null, PAGES[currentPage]?.label || '');
   if (prev) prev.disabled = busy || currentPage === 0;
   if (next) next.disabled = busy || currentPage >= PAGES.length - 1;
   renderChapterRail();
@@ -1451,7 +1390,7 @@ function ensureChapterRail() {
     dot.className = 'chapter-dot';
     dot.dataset.idx = idx;
     dot.style.top = `calc(${pctOfChapter(idx)}% - 3px)`;
-    dot.title = ch.label;
+    dot.title = t('chapter.' + ch.id, null, ch.label);
     track.appendChild(dot);
   });
   const thumb = document.createElement('div');
@@ -1475,7 +1414,7 @@ function ensureChapterRail() {
     const pct = pctOfChapter(idx);
     thumb.style.top = `calc(${pct}% - 5px)`;
     popup.style.top = `calc(${pct}% + 1px)`;
-    popup.textContent = CHAPTERS[idx].label;
+    popup.textContent = t('chapter.' + CHAPTERS[idx].id, null, CHAPTERS[idx].label);
     popup.classList.add('visible');
   };
   const hidePreview = () => popup.classList.remove('visible');
@@ -1534,7 +1473,7 @@ function showCardModal(src, alt) {
     <div class="card-modal-backdrop"></div>
     <div class="card-modal-content">
       <img src="${src}" alt="${alt || ''}">
-      <button class="card-modal-close">닫기 (Esc)</button>
+      <button class="card-modal-close">${t('ui.modalClose')}</button>
     </div>`;
   document.body.appendChild(m);
   m.querySelector('.card-modal-close').addEventListener('click', closeAllCardModals);
@@ -1777,8 +1716,8 @@ async function drawCardsStaggerSelf(keys, opts = {}) {
    ============================================================ */
 async function playGameStart() {
   setSubtitle(
-    '게임 시작',
-    '주사위로 선·후공을 정한 뒤 각자 <strong>7장</strong>의 초기 핸드를 받습니다.'
+    t('subtitle.gameStart.step'),
+    t('subtitle.gameStart.body')
   );
 
   if (FAST_MODE) {
@@ -1833,7 +1772,7 @@ async function playGameStart() {
   /* 3) Player A 말풍선: "먼저 시작하겠습니다!". A 주사위 박스 위에 정렬. */
   const bubble = document.createElement('div');
   bubble.className = 'dialog-bubble tail-down game-start-bubble';
-  bubble.innerHTML = '먼저 시작하겠습니다!';
+  bubble.innerHTML = t('dialog.gameStartBubble');
   document.body.appendChild(bubble);
   const aRect = diceA.getBoundingClientRect();
   bubble.style.position = 'fixed';
@@ -1868,8 +1807,8 @@ async function playMulligan() {
   if (!handEl || !deckEl) return;
 
   setSubtitle(
-    '멀리건',
-    '맘에 들지 않는 카드 <strong>4장</strong>을 덱 밑으로 되돌리고, 같은 수만큼 새로 드로우합니다.'
+    t('subtitle.mulligan.step'),
+    t('subtitle.mulligan.body')
   );
 
   /* 1) Identify the 4 return cards in hand. Match by key; handle dupes. */
@@ -1984,8 +1923,8 @@ async function playInkAdd(sideKey = 'self', cardKey = null) {
   }
 
   setSubtitle(
-    `T${currentTurn} / ${isOpp ? 'Player B' : 'Player A'}의 잉크 추가`,
-    `<strong>${card.fullName}</strong>${isOpp ? ' — 잉크 가능 카드를 공개합니다.' : '을(를) 잉크로 사용합니다.'}`
+    t('subtitle.inkAdd.step', { turn: currentTurn, player: isOpp ? 'Player B' : 'Player A' }),
+    `<strong>${card.fullName}</strong>${isOpp ? t('subtitle.inkAdd.bodyOpp') : t('subtitle.inkAdd.bodySelf')}`
   );
 
   /* Aspect ratio — use whichever image we can get a natural size from. */
@@ -2136,7 +2075,7 @@ async function playChallenge(attackerSide, attackerKey, defenderSide, defenderKe
   if (!attackerEl || !defenderEl) return;
 
   setSubtitle(
-    `T${currentTurn} / 챌린지`,
+    t('subtitle.challenge.step', { turn: currentTurn }),
     `<strong>${attackerCard.fullName}</strong> ⚔ <strong>${defenderCard.fullName}</strong>`
   );
 
@@ -2226,7 +2165,7 @@ async function playChallenge(attackerSide, attackerKey, defenderSide, defenderKe
     if (!DIALOGS.some(d => d.cardKey === 'sim_robin_champion' && d.tag === 'champ-bonus')) {
       DIALOGS.push({
         side: attackerSide, cardKey: 'sim_robin_champion', tag: 'champ-bonus',
-        text: '<strong>Robin Hood의 고유효과:</strong><br>챌린지로 적을 무너뜨릴 때마다<br><strong>+2 Lore</strong>를 얻어요!',
+        text: t('dialog.robinHood'),
         tail: 'tail-up',
         offset: { x: -10, y: 240 },
         placement: 'below',
@@ -2244,15 +2183,15 @@ async function playChallenge(attackerSide, attackerKey, defenderSide, defenderKe
    ============================================================ */
 async function playMulanEffect() {
   setSubtitle(
-    `T${currentTurn} / Mulan의 효과`,
-    `덱에서 1장 드로우 → 핸드에서 1장 디스카드`
+    t('subtitle.mulanEffect.step', { turn: currentTurn }),
+    t('subtitle.mulanEffect.body')
   );
 
   /* 뮬란 카드 위에 효과 설명 말풍선 — 효과 종료 후 자동 제거 (mulan-effect-explain tag). */
   if (!DIALOGS.some(d => d.cardKey === 'sim_mulan' && d.tag === 'mulan-effect-explain')) {
     DIALOGS.push({
       side: 'self', cardKey: 'sim_mulan', tag: 'mulan-effect-explain',
-      text: '뮬란의 등장 효과 발동!<br>덱에서 <strong>1장 드로우</strong>한 뒤<br>핸드에서 <strong>1장을 버립니다</strong>',
+      text: t('dialog.mulanEntrance'),
       tail: 'tail-down',
       offset: { x: 0, y: -55 },
     });
@@ -2331,7 +2270,7 @@ async function playDevelopYourBrain() {
 
   setSubtitle(
     `T${currentTurn} / Develop Your Brain`,
-    `덱에서 카드 <strong>2장</strong>을 보고 <strong>1장</strong>은 핸드로, 나머지는 덱 바닥으로.`
+    t('subtitle.develop.body')
   );
 
   const handEl = document.getElementById('self-hand');
@@ -2498,7 +2437,7 @@ async function playDevelopYourBrain() {
     DIALOGS.push({
       side: 'self', tag: 'action-to-discard',
       zoneSelector: '.self-lr .discard-zone',
-      text: '<strong>Action</strong> 카드는 발동 후<br>바로 <strong>discard</strong> 로 갑니다',
+      text: t('dialog.actionDiscard'),
       tail: 'tail-right',
       placement: 'left-of',
     });
@@ -2517,8 +2456,8 @@ async function playPlutoEffect() {
   const cardEl = playEl?.children[playIdx];
 
   setSubtitle(
-    `T${currentTurn} / Pluto의 능력`,
-    `<strong>Pluto</strong>를 Exert → 다음 캐릭터의 잉크 비용 <strong>-1</strong>.`
+    t('subtitle.pluto.step', { turn: currentTurn }),
+    t('subtitle.pluto.body')
   );
 
   /* Exert Pluto (Player B's own character — paying its own ability cost). */
@@ -2531,7 +2470,7 @@ async function playPlutoEffect() {
     const rect = cardEl.getBoundingClientRect();
     const bubble = document.createElement('div');
     bubble.className = 'dialog-bubble tail-up';
-    bubble.innerHTML = '<strong>Pluto의 고유효과:</strong><br><strong>−1 잉크!</strong> 다음 캐릭터';
+    bubble.innerHTML = t('dialog.plutoBubble');
     bubble.style.position = 'fixed';
     bubble.style.left = (rect.left + rect.width / 2 - 80) + 'px';
     bubble.style.top  = (rect.bottom + 14) + 'px';
@@ -2569,8 +2508,8 @@ async function playQuest(sideKey, cardKey) {
   const playerLabel = sideKey === 'self' ? 'Player A' : 'Player B';
 
   setSubtitle(
-    `T${currentTurn} / ${playerLabel}의 퀘스트`,
-    `<strong>${card.fullName}</strong> 퀘스트 → <strong>+${loreGain} Lore</strong>`
+    t('subtitle.quest.step', { turn: currentTurn, player: playerLabel }),
+    t('subtitle.quest.body', { cardName: card.fullName, lore: loreGain })
   );
 
   /* (1) Exert character. */
@@ -2666,8 +2605,8 @@ function setupFinalBoardState() {
 
 async function playFinaleJump() {
   setSubtitle(
-    '마지막 턴',
-    '여러 턴이 지나 — Player A의 <strong>마지막 턴</strong>입니다.'
+    t('subtitle.finaleJump.step'),
+    t('subtitle.finaleJump.body')
   );
 
   if (FAST_MODE) {
@@ -2695,7 +2634,7 @@ async function playFinaleJump() {
       <line class="cl-hand cl-min"  x1="100" y1="100" x2="100" y2="35"/>
       <circle class="cl-center" cx="100" cy="100" r="6"/>
     </svg>
-    <div class="finale-clock-caption">— 여러 턴 뒤 —</div>
+    <div class="finale-clock-caption">${t('ui.finaleCaption')}</div>
   `;
   document.body.appendChild(wrap);
 
@@ -2760,7 +2699,7 @@ async function playVictorySequence() {
   `;
   document.body.appendChild(badge);
 
-  setSubtitle('승리!', 'Player A 가 <strong>Lore 20</strong>에 도달해 게임을 승리했습니다.');
+  setSubtitle(t('subtitle.victory.step'), t('subtitle.victory.body'));
 
   await sleep(2200);
 }
@@ -2788,11 +2727,11 @@ async function playChallengeBlocked(attackerSide, attackerKey, targetSide, targe
   if (!aEl || !tEl) return;
 
   setSubtitle(
-    `T${currentTurn} / 챌린지 실패`,
+    t('subtitle.challengeBlocked.step', { turn: currentTurn }),
     `<strong>${attackerCard.fullName}</strong> → <strong>${targetCard.fullName}</strong>` +
     (blockerCard
-      ? ` &nbsp;&nbsp; ❌ <strong>${blockerCard.fullName}</strong>의 <em>Bodyguard</em>로 막혀 챌린지 대상이 될 수 없습니다.`
-      : ` &nbsp;&nbsp; ❌ 챌린지 대상이 될 수 없습니다.`)
+      ? t('subtitle.challengeBlocked.blockedBy', { blocker: blockerCard.fullName })
+      : t('subtitle.challengeBlocked.blockedGeneric'))
   );
 
   /* Attempt arrow attacker → declared target. */
@@ -2813,8 +2752,8 @@ async function playChallengeBlocked(attackerSide, attackerKey, targetSide, targe
   const tRect2 = tEl.getBoundingClientRect();
   const bubble = document.createElement('div');
   bubble.className = 'dialog-bubble tail-down';
-  const blockerName = blockerCard?.name || '캐릭터';
-  bubble.innerHTML = `<strong>Bodyguard</strong>인<br>${blockerName}이(가)<br>지켜주고 있어요.`;
+  const blockerName = blockerCard?.name || t('dialog.blockerFallback');
+  bubble.innerHTML = t('dialog.bodyguardBlock', { name: blockerName });
   bubble.style.position = 'fixed';
   bubble.style.left = (tRect2.left + tRect2.width / 2 - 100) + 'px';
   bubble.style.top  = (tRect2.top - 90) + 'px';
@@ -2836,7 +2775,7 @@ async function playLetItGo() {
 
   setSubtitle(
     `T${currentTurn} / Let It Go (Sing)`,
-    `<strong>${CARDS[singerKey].name}</strong>을 <strong>Exert</strong>하여 <strong>${songCard.fullName}</strong>를 부릅니다.`
+    t('subtitle.letItGo.body', { singer: CARDS[singerKey].name, song: songCard.fullName })
   );
 
   /* (1) Exert the singer. */
@@ -3025,8 +2964,10 @@ async function playCard(sideKey, cardKey, options = {}) {
   const playerLabel  = sideKey === 'self' ? 'Player A' : 'Player B';
 
   setSubtitle(
-    `T${currentTurn} / ${playerLabel}의 카드 플레이`,
-    `<strong>${card.fullName}</strong> 등장${startExerted ? ' (Exerted)' : ''}${cost > 0 ? ` — 비용 ${cost} 잉크.` : '.'}`
+    t('subtitle.cardPlay.step', { turn: currentTurn, player: playerLabel }),
+    t('subtitle.cardPlay.bodyEnter', { cardName: card.fullName })
+      + (startExerted ? ' (Exerted)' : '')
+      + (cost > 0 ? t('subtitle.cardPlay.costPart', { cost }) : t('subtitle.cardPlay.dot'))
   );
 
   /* 1) Pay ink cost (stagger exert). */
@@ -3121,7 +3062,7 @@ async function playCard(sideKey, cardKey, options = {}) {
       && !DIALOGS.some(d => d.cardKey === 'sim_robin_beloved' && d.tag === 'ink-not-dry')) {
     DIALOGS.push({
       side: 'self', cardKey: 'sim_robin_beloved', tag: 'ink-not-dry',
-      text: '플레이한 턴엔 잉크가 안 말라서<br>퀘스트할 수 없어요!',
+      text: t('dialog.inkNotDry'),
       tail: 'tail-up',
       offset: { x: -10, y: 240 },
       placement: 'below',
@@ -3133,7 +3074,7 @@ async function playCard(sideKey, cardKey, options = {}) {
       && !DIALOGS.some(d => d.cardKey === 'sim_rajah' && d.tag === 'bodyguard-exerted')) {
     DIALOGS.push({
       side: 'opp', cardKey: 'sim_rajah', tag: 'bodyguard-exerted',
-      text: '<strong>Bodyguard</strong>는<br>Exerted 상태로 플레이할 수 있어요',
+      text: t('dialog.bodyguardExerted'),
       tail: 'tail-down',
       offset: { x: -10, y: -55 },
     });

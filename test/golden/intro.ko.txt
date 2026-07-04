@@ -1,0 +1,416 @@
+=== p1-title (title) ===
+
+      <div class="overlay-title-block">
+        <img class="overlay-banner" src="res/title.png" alt="Disney Lorcana">
+        <h1 class="overlay-title">Disney Lorcana Guide</h1>
+        <p class="overlay-subtitle">How to play</p>
+        <p class="overlay-description">디즈니 로카나 플레이방법을 배워봅시다!</p>
+        <p class="overlay-hint">
+          <kbd>Space</kbd> / <kbd>→</kbd> 다음 ·
+          <kbd>Backspace</kbd> / <kbd>←</kbd> 이전
+        </p>
+      </div>
+
+=== p2-world (world) ===
+
+      <div class="overlay-world">
+        <img class="overlay-world-img" src="res/illumineer.webp" alt="Illumineer">
+        <div class="overlay-world-text">
+          <h2 class="overlay-section-title">디즈니 로카나의 세계</h2>
+          <p>디즈니 로카나는 <strong>마법의 잉크</strong>로 나만의 이야기를 완성해가는 전략 카드 게임입니다.</p>
+          <p>마법 잉크를 다루는 <strong>일루미니어</strong>가 되어 디즈니 세계의 영웅들과 함께 스릴 넘치는 도전과 모험을 경험하세요.</p>
+          <p>그리고 이야기 조각을 모아 <strong>승리</strong>하세요!</p>
+        </div>
+      </div>
+
+=== p3-ink-colors (ink-colors) ===
+
+      <div class="overlay-ink-section">
+        <h2 class="overlay-section-title">6가지 잉크 컬러</h2>
+        <div class="ink-hex">
+          <div class="ink-slot ink-amber">
+            <img src="res/dlc_ink_amber.png" alt="Amber">
+            <div class="ink-bubble"><strong>Amber</strong><br>회복 + 노래</div>
+          </div>
+          <div class="ink-slot ink-amethyst">
+            <img src="res/dlc_ink_amethyst.png" alt="Amethyst">
+            <div class="ink-bubble"><strong>Amethyst</strong><br>마법 + 조작</div>
+          </div>
+          <div class="ink-slot ink-emerald">
+            <img src="res/dlc_ink_emerald.png" alt="Emerald">
+            <div class="ink-bubble"><strong>Emerald</strong><br>트릭 + 교란</div>
+          </div>
+          <div class="ink-slot ink-ruby">
+            <img src="res/dlc_ink_ruby.png" alt="Ruby">
+            <div class="ink-bubble"><strong>Ruby</strong><br>전투 + 제거</div>
+          </div>
+          <div class="ink-slot ink-sapphire">
+            <img src="res/dlc_ink_sapphire.png" alt="Sapphire">
+            <div class="ink-bubble"><strong>Sapphire</strong><br>지식 + 축적</div>
+          </div>
+          <div class="ink-slot ink-steel">
+            <img src="res/dlc_ink_steel.png" alt="Steel">
+            <div class="ink-bubble"><strong>Steel</strong><br>저항 + 공격</div>
+          </div>
+          <p class="overlay-tagline">특성을 살리고 조합하여<br>나만의 덱을 구축하자!</p>
+        </div>
+      </div>
+
+=== p4-anatomy (card-anatomy) ===
+
+      <div class="card-anatomy">
+        <img class="card-anatomy-img" decoding="async" src="https://api.lorcana.ravensburger.com/images/en/set1/12_da68c89ea3fc28a3a7396c30ab3da45e0f204eea.jpg" alt="Mickey Mouse - True Friend">
+        <div class="callout c-cost"><strong>잉크 비용</strong><br>이 카드를 플레이하는 데 필요한 잉크 수<br>— 이 카드는 <strong>3</strong></div>
+        <div class="callout c-name-version">
+          <strong>이름 · <em>Mickey Mouse</em></strong><br>
+          <small>같은 이름은 한 덱에 4장까지</small><br>
+          <strong>버전 · <em>"True Friend"</em></strong><br>
+          <small>같은 캐릭터의 다른 모습/스탯</small>
+        </div>
+        <div class="callout c-stats">
+          <strong>힘 ¤ 3</strong> <small>챌린지 시 주는 데미지</small><br>
+          <strong>의지력 ⛉ 3</strong> <small>받을 수 있는 데미지 한계 (초과 시 banish)</small>
+        </div>
+        <div class="callout c-lore"><strong>로어 ◆ 2</strong><br>이 캐릭터로 퀘스트할 때 얻는 Lore 점수</div>
+      </div>
+
+=== p-action-brief-t3 (action-brief) ===
+
+      <div class="overlay-section closing-brief">
+        <h2 class="overlay-section-title">액션 (Action)</h2>
+        <div class="closing-card-row two">
+          <img class="closing-card-img" src="https://api.lorcana.ravensburger.com/images/en/set1/130_decfce2e256561e57abe8d2d5e378a3781c2ee6d.jpg" alt="Dragon Fire">
+          <img class="closing-card-img" src="https://api.lorcana.ravensburger.com/images/en/set1/163_4f979476a1bf4097c7e9020bea78fa7fd8712a4e.jpg" alt="Let It Go">
+        </div>
+        <p class="closing-desc">
+          <strong>액션</strong> 카드는 잉크 비용을 지불해 즉발적인 효과를 발동시키고
+          곧바로 <strong>discard</strong>로 들어가는 강력한 카드입니다.<br>
+          <strong>Song(노래)</strong>은 액션의 한 종류이지만 캐릭터가 부르는 것으로
+          <strong class="hl">잉크를 지불하지 않고</strong> 발동할 수 있습니다.
+        </p>
+      </div>
+
+=== p-item-brief (item-brief) ===
+
+      <div class="overlay-section closing-brief">
+        <h2 class="overlay-section-title">아이템 (Item)</h2>
+        <div class="closing-card-row one">
+          <img class="closing-card-img" src="https://api.lorcana.ravensburger.com/images/en/set1/33_0387aaa8150e80c49743e0a7fd898eb3f4ea2816.jpg" alt="Lantern">
+        </div>
+        <p class="closing-desc">
+          <strong>아이템</strong>은 Play Area에 남아 <strong>영속적인 효과나 어빌리티</strong>를 제공합니다.<br>
+          캐릭터와 달리 <strong class="hl">잉크가 마르기를 기다릴 필요 없이</strong>,
+          플레이한 턴부터 효과·어빌리티를 곧바로 사용할 수 있습니다.
+        </p>
+      </div>
+
+=== p-location-brief (location-brief) ===
+
+      <div class="overlay-section closing-brief">
+        <h2 class="overlay-section-title">로케이션 (Location)</h2>
+        <div class="closing-card-row one">
+          <div class="loc-frame">
+            <img class="closing-card-img location-card" src="https://api.lorcana.ravensburger.com/images/en/set10/68_a50f12321fcf05a2d15ea5f8e37e8715083a3d65.jpg" alt="The Great Illuminary - Abandoned Laboratory">
+          </div>
+        </div>
+        <p class="closing-desc">
+          <strong>로케이션</strong>은 잉크 비용을 지불해 플레이합니다.
+          이후 캐릭터가 좌측의 <strong>이동 비용(Move Cost)</strong>을 지불하면
+          그 로케이션으로 이동해 효과를 적용받습니다.<br>
+          로케이션 자체도 <strong>챌린지의 대상</strong>이 될 수 있고,
+          받은 데미지가 의지력(⛉)을 넘으면 <strong class="hl">banish</strong>됩니다.<br>
+          자신의 비기닝 페이즈 <strong>SET</strong> 단계에 로케이션 위에 표시된
+          <strong>로어(◆)</strong>만큼 자동으로 Lore를 얻습니다.
+        </p>
+      </div>
+
+=== p6-transition (transition) ===
+
+      <div class="overlay-title-block">
+        <h1 class="overlay-title">그럼 실제로 게임을<br>진행하면서 배워볼까요?</h1>
+        
+      </div>
+
+=== p7-game-start (transition) ===
+
+      <div class="overlay-title-block">
+        <h1 class="overlay-title">게임 시작!</h1>
+        <p class="overlay-description">이제 게임을 시작해볼까요?<br>가위바위보나 주사위를 던져 이긴 사람이 선/후공을 정합니다.<br><br>설명을 위해 <strong>나의 선공</strong>으로 게임을 시작해봅시다.</p>
+      </div>
+
+=== p8-mulligan-brief (transition) ===
+
+      <div class="overlay-title-block">
+        <h1 class="overlay-title">멀리건</h1>
+        <p class="overlay-description">초기 핸드 7장을 받은 뒤, 게임 시작 전 <strong class="hl">단 1회</strong>에 한해 마음에 들지 않는 카드를 골라 <strong>덱 밑으로 되돌릴 수</strong> 있습니다.<br>
+되돌린 만큼 다시 7장이 되도록 <strong>새 카드를 드로우</strong>합니다.<br>
+이후 덱을 잘 <strong>셔플</strong>하여 게임을 시작합니다.<br><br>
+초반 잉크 카드와 핵심 캐릭터의 균형을 잡는 중요한 결정입니다.</p>
+      </div>
+
+=== p-ink-rules (ink-rules) ===
+
+      <div class="overlay-section ink-rules">
+        <h2 class="overlay-section-title">잉크 추가</h2>
+        <div class="ink-rules-pair">
+          <div class="ink-rule">
+            <img src="res/inkable.png" alt="잉크 가능">
+            <div class="ink-rule-label">잉크 가능</div>
+          </div>
+          <div class="ink-rule">
+            <img src="res/uninkable.png" alt="잉크 불가능">
+            <div class="ink-rule-label">잉크 불가능</div>
+          </div>
+        </div>
+        <p><strong class="hl">한 턴에 한 번</strong>, 잉크 가능한 카드를 뒷면으로 잉크웰에 놓을 수 있습니다.</p>
+        <p>이때 상대에게 <strong>잉크 가능한 카드임을 확인</strong>시켜주어야 합니다.</p>
+        <p>자신의 턴 중이라면 <strong>언제든</strong> 넣을 수 있습니다.</p>
+      </div>
+
+=== p-ready-exert-brief (ready-exert) ===
+
+      <div class="overlay-section ready-exert">
+        <h2 class="overlay-section-title">Ready &amp; Exert</h2>
+        <div class="ready-exert-pair">
+          <div class="re-state">
+            <img src="https://api.lorcana.ravensburger.com/images/en/set3/189_05b50f56b53ceec9a7a5983d5f819cef6a7d61f6.jpg" alt="Ready" class="re-card">
+            <div class="re-label"><strong>Ready (준비)</strong><br>세로 — 행동 가능</div>
+          </div>
+          <div class="re-state">
+            <img src="https://api.lorcana.ravensburger.com/images/en/set3/189_05b50f56b53ceec9a7a5983d5f819cef6a7d61f6.jpg" alt="Exerted" class="re-card re-exerted">
+            <div class="re-label"><strong>Exerted (사용 후)</strong><br>가로 — 행동 완료</div>
+          </div>
+        </div>
+        <p class="ready-exert-desc">
+          잉크를 지불하거나, 퀘스트·챌린지·노래 등 행동을 하면 카드를 <strong>Exert</strong>(가로) 합니다.<br>
+          자신의 비기닝 페이즈에 다시 <strong>Ready</strong>(세로) 상태로 돌아옵니다.
+        </p>
+      </div>
+
+=== p-cost-exert-brief (cost-exert) ===
+
+      <div class="overlay-section cost-exert">
+        <h2 class="overlay-section-title">잉크 비용 지불</h2>
+        <p class="cost-exert-desc">카드를 플레이하려면, 그 카드의 <strong>잉크 비용</strong>만큼 자신의 잉크를 <strong>Exert</strong>합니다.<br>이렇게 잉크를 지불하고 카드를 보드에 내는 행위를 <strong>'play'</strong>한다고 표현합니다.</p>
+        <div class="cost-exert-grid">
+          <div class="cost-exert-item">
+            <img class="cost-exert-card" src="https://api.lorcana.ravensburger.com/images/en/set3/189_05b50f56b53ceec9a7a5983d5f819cef6a7d61f6.jpg" alt="Robin Hood - Beloved Outlaw">
+            <div class="cost-exert-label">비용 <strong>1</strong></div>
+            <div class="cost-inkwell"><div class="cost-ink-card"></div></div>
+          </div>
+          <div class="cost-exert-item">
+            <img class="cost-exert-card" src="https://api.lorcana.ravensburger.com/images/en/set5/19_1051e2424833a2ce7b33b3441f67978911408290.jpg" alt="Vanellope von Schweetz - Sugar Rush Princess">
+            <div class="cost-exert-label">비용 <strong>4</strong></div>
+            <div class="cost-inkwell"><div class="cost-ink-card"></div><div class="cost-ink-card"></div><div class="cost-ink-card"></div><div class="cost-ink-card"></div></div>
+          </div>
+        </div>
+      </div>
+
+=== p-begin-brief (begin-brief) ===
+
+      <div class="overlay-section begin-brief">
+        <h2 class="overlay-section-title">비기닝 페이즈</h2>
+        <p class="overlay-section-sub">내 턴이 시작될 때 진행하는 <strong>READY → SET → DRAW</strong> 3단계</p>
+        <div class="begin-phases">
+          <div class="begin-phase phase-ready">
+            <div class="phase-step">1</div>
+            <h3>READY</h3>
+            <p>내 모든 <strong>캐릭터와 잉크</strong>를<br>Ready(세로) 상태로 복귀</p>
+            <div class="begin-ready-demo">
+              <div class="ready-demo-item">
+                <div class="ready-demo-char" style="background-image: url('https://api.lorcana.ravensburger.com/images/en/set3/189_05b50f56b53ceec9a7a5983d5f819cef6a7d61f6.jpg');"></div>
+                <div class="ready-demo-tag">캐릭터</div>
+              </div>
+              <div class="ready-demo-item">
+                <div class="ready-demo-ink"></div>
+                <div class="ready-demo-tag">잉크</div>
+              </div>
+            </div>
+            <p class="begin-card-caption begin-ready-note">
+              <strong>Exert(가로)</strong> 상태의 플레이 중인 카드와 잉크를<br>
+              모두 <strong>Ready(세로)</strong> 상태로 되돌립니다
+            </p>
+          </div>
+          <div class="begin-phase phase-set">
+            <div class="phase-step">2</div>
+            <h3>SET</h3>
+            <p>"<strong>턴이 시작될 때</strong>" 발동하는<br>효과들이 처리됩니다</p>
+            <img src="https://api.lorcana.ravensburger.com/images/en/set12/121_5be0c6e34af28b7ae21b074c7a7efb5ba210c5b5.jpg" alt="Jack-Jack Parr - Incredible Potential" class="begin-card-example begin-card-glow" decoding="async">
+            <p class="begin-card-caption">예: <em>Jack-Jack Parr — Incredible Potential</em><br>"<strong>At the start of your turn,</strong> you may put the top card of your deck into your discard..."</p>
+          </div>
+          <div class="begin-phase phase-draw">
+            <div class="phase-step">3</div>
+            <h3>DRAW</h3>
+            <p>덱에서 카드 <strong>1장</strong>을<br>핸드로 드로우합니다</p>
+            <div class="begin-draw-demo">
+              <div class="begin-deck"><div class="card-back deck-back"></div></div>
+              <div class="begin-draw-card"><div class="card-back deck-back"></div></div>
+            </div>
+            <p class="begin-card-caption begin-draw-note">
+              단, <strong>선공의 첫 턴</strong>에는 드로우하지 않고<br>
+              <strong>후공의 첫 턴부터</strong> 드로우를 진행합니다
+            </p>
+          </div>
+        </div>
+      </div>
+
+=== p-quest-brief (quest-brief) ===
+
+      <div class="overlay-section quest-brief">
+        <h2 class="overlay-section-title">퀘스트</h2>
+        <div class="quest-demo">
+          <div class="quest-demo-card-zone">
+            <img class="quest-demo-card" src="https://api.lorcana.ravensburger.com/images/en/set3/189_05b50f56b53ceec9a7a5983d5f819cef6a7d61f6.jpg" alt="Robin Hood - Beloved Outlaw">
+            <div class="quest-demo-pop"><span class="lore-pop-diamond">◆</span>+1</div>
+          </div>
+          <div class="quest-demo-arrow"></div>
+          <div class="quest-demo-diamond">
+            <span class="quest-num quest-num-0">0</span>
+            <span class="quest-num quest-num-1">1</span>
+          </div>
+        </div>
+        <p class="quest-desc">
+          잉크가 마른 캐릭터를 <strong>Exert</strong>하는 것으로 <strong>퀘스트</strong>를 선언할 수 있습니다.<br>
+          퀘스트를 하면 플레이어의 로어 카운트가 캐릭터의 로어 밸류만큼 오릅니다.<br><br>
+          <strong class="hl">이 로어 카운트가 20이 되면 게임에서 승리합니다.</strong>
+        </p>
+      </div>
+
+=== p-shift-brief (shift-brief) ===
+
+      <div class="overlay-section shift-brief">
+        <h2 class="overlay-section-title">시프트</h2>
+        <div class="shift-pair">
+          <div class="shift-item">
+            <div class="shift-card-zone single">
+              <img class="cost-exert-card" src="https://api.lorcana.ravensburger.com/images/en/set9/177_e5101df6eaee76e77b9fd747346b771cde79d5cd.jpg" alt="Robin Hood - Champion of Sherwood">
+            </div>
+            <div class="cost-exert-label">일반 플레이 — 비용 <strong>5</strong></div>
+            <div class="cost-inkwell shift-cost-5"><div class="cost-ink-card"></div><div class="cost-ink-card"></div><div class="cost-ink-card"></div><div class="cost-ink-card"></div><div class="cost-ink-card"></div></div>
+          </div>
+          <div class="shift-vs">VS</div>
+          <div class="shift-item">
+            <div class="shift-card-zone stacked">
+              <img class="cost-exert-card shift-base" src="https://api.lorcana.ravensburger.com/images/en/set3/189_05b50f56b53ceec9a7a5983d5f819cef6a7d61f6.jpg" alt="Robin Hood - Beloved Outlaw">
+              <img class="cost-exert-card shift-top"  src="https://api.lorcana.ravensburger.com/images/en/set9/177_e5101df6eaee76e77b9fd747346b771cde79d5cd.jpg" alt="Robin Hood - Champion of Sherwood">
+            </div>
+            <div class="cost-exert-label"><strong>Shift</strong> 플레이 — 비용 <strong>3</strong></div>
+            <div class="cost-inkwell"><div class="cost-ink-card"></div><div class="cost-ink-card"></div><div class="cost-ink-card"></div></div>
+          </div>
+        </div>
+        <p class="shift-desc">
+          <strong>Shift</strong> 능력이 있다면 같은 이름의 캐릭터 위에 더 적은 잉크를 지불하고 낼 수도 있습니다.<br>
+          시프트를 하면 캐릭터가 변화한 것으로 취급하여 원래 있던 <strong class="hl">캐릭터의 데미지, 잉크마름 상태까지도 전부 유지</strong>됩니다.
+        </p>
+      </div>
+
+=== p-challenge-brief (challenge-brief) ===
+
+      <div class="overlay-section challenge-brief">
+        <h2 class="overlay-section-title">챌린지</h2>
+        <div class="challenge-demo">
+          <div class="ch-side ch-attacker">
+            <img class="ch-card" src="https://api.lorcana.ravensburger.com/images/en/promo3/38_6ecb0f1c83f2a12d7fbdc578b31fff2883a734e6.jpg" alt="Mulan - Disguised Soldier">
+            <div class="ch-flash"></div>
+            <div class="ch-dmg">3</div>
+            <div class="ch-label">공격자 — Exert</div>
+          </div>
+          <div class="ch-arrow"></div>
+          <div class="ch-side ch-defender">
+            <img class="ch-card ch-card-static" src="https://api.lorcana.ravensburger.com/images/en/set10/6_f3e8cbaf1f7d32acf45b5f025bf61918087bfd3f.jpg" alt="Rajah - Devoted Protector">
+            <div class="ch-flash"></div>
+            <div class="ch-dmg">2</div>
+            <div class="ch-label">방어자</div>
+          </div>
+        </div>
+        <p class="challenge-desc">
+          자신의 <strong>Ready</strong> 상태인 캐릭터를 <strong>Exert</strong>하여 상대 캐릭터에게 챌린지를 선언합니다.<br>
+          서로의 <strong>공격력(¤)</strong>만큼 데미지를 주고받고, 받은 데미지가 <strong>의지력(⛉)</strong> 이상이 되면 <strong class="hl">banish</strong>됩니다.<br>
+          상대의 <strong>Ready</strong> 상태 캐릭터는 챌린지 대상이 될 수 없습니다.
+        </p>
+      </div>
+
+=== p-sing-brief (sing-brief) ===
+
+      <div class="overlay-section sing-brief">
+        <h2 class="overlay-section-title">Sing (노래 부르기)</h2>
+        <div class="sing-pair">
+          <div class="sing-item">
+            <img class="cost-exert-card" src="https://api.lorcana.ravensburger.com/images/en/set1/163_4f979476a1bf4097c7e9020bea78fa7fd8712a4e.jpg" alt="Let It Go">
+            <div class="cost-exert-label">일반 플레이 — 비용 <strong>5</strong></div>
+            <div class="cost-inkwell shift-cost-5"><div class="cost-ink-card"></div><div class="cost-ink-card"></div><div class="cost-ink-card"></div><div class="cost-ink-card"></div><div class="cost-ink-card"></div></div>
+          </div>
+          <div class="shift-vs">VS</div>
+          <div class="sing-item">
+            <div class="sing-stack">
+              <img class="cost-exert-card sing-singer" src="https://api.lorcana.ravensburger.com/images/en/set9/177_e5101df6eaee76e77b9fd747346b771cde79d5cd.jpg" alt="Robin Hood - Champion of Sherwood">
+              <img class="cost-exert-card sing-song" src="https://api.lorcana.ravensburger.com/images/en/set1/163_4f979476a1bf4097c7e9020bea78fa7fd8712a4e.jpg" alt="Let It Go">
+            </div>
+            <div class="cost-exert-label"><strong>Sing</strong> — 비용 ⓘ <strong>0</strong> 잉크</div>
+            <div class="cost-exert-label sing-sub">캐릭터를 <strong>Exert</strong>합니다.</div>
+          </div>
+        </div>
+        <p class="sing-desc">
+          <strong>Song(노래)</strong> 카드는 그 노래의 비용 이상의 캐릭터를 <strong>Exert</strong>하는 것으로<br>
+          잉크를 지불하지 않고 <strong class="hl">"부를(Sing)"</strong> 수 있습니다.<br>
+          노래는 효과가 발동된 뒤 <strong>discard</strong>로 이동합니다.
+        </p>
+      </div>
+
+=== p-finale-excuse (finale-excuse) ===
+
+      <div class="overlay-title-block finale-excuse-block">
+        <h1 class="overlay-title finale-excuse-title">여러 턴 뒤 —</h1>
+        <p class="overlay-subtitle finale-excuse-sub">Player A의 <strong>마지막 턴</strong>.</p>
+      </div>
+
+=== p-victory-rule (victory-rule) ===
+
+      <div class="overlay-section closing-brief victory-rule">
+        <h2 class="overlay-section-title">승리 조건</h2>
+        <div class="vr-anim">
+          <div class="vr-card-wrap">
+            <img class="vr-card" src="https://api.lorcana.ravensburger.com/images/en/set3/189_05b50f56b53ceec9a7a5983d5f819cef6a7d61f6.jpg" alt="quest demo">
+            <div class="vr-lore-pop">◆+1</div>
+          </div>
+          <div class="vr-arrow">→</div>
+          <div class="vr-counter">
+            <div class="vr-counter-track">
+              <span class="vr-c-before">19</span>
+              <span class="vr-c-after">20</span>
+            </div>
+            <span class="vr-c-of">/ 20</span>
+          </div>
+          <div class="vr-crown">👑</div>
+        </div>
+        <p class="closing-desc victory-rule-headline">
+          먼저 <strong class="hl">Lore 20점</strong>을 모은 플레이어가 <strong>승리</strong>합니다.
+        </p>
+        <ul class="closing-bullets">
+          <li>캐릭터로 <strong>퀘스트</strong>하면 그 캐릭터의 <strong>◆</strong> 만큼 Lore 획득</li>
+          <li>자신의 비기닝 페이즈 SET 단계에 <strong>로케이션</strong>의 ◆ 만큼 자동 획득</li>
+          <li>일부 카드 <strong>효과</strong>로 추가 Lore 획득 (예: Robin Hood — Champion 챌린지 +2)</li>
+        </ul>
+      </div>
+
+=== p-deck-brief (deck-brief) ===
+
+      <div class="overlay-section closing-brief">
+        <h2 class="overlay-section-title">덱 구성</h2>
+        <ul class="closing-bullets">
+          <li>덱은 <strong>최대 2개</strong>의 잉크 색을 조합해 짤 수 있습니다.</li>
+          <li>덱은 <strong class="hl">최소 60장</strong>이어야 합니다.</li>
+          <li>같은 <strong>이름 + 같은 버전</strong>의 카드는 한 덱에 <strong>최대 4장</strong>까지.</li>
+        </ul>
+        <p class="closing-desc">
+          잉크 색의 성격을 살리고, 캐릭터·아이템·노래·로케이션을 균형 있게 섞어<br>
+          <strong>나만의 덱</strong>을 만들어 보세요.
+        </p>
+      </div>
+
+=== p-thanks (thanks) ===
+
+      <div class="overlay-title-block">
+        <h1 class="overlay-title">감사합니다.</h1>
+        <p class="overlay-subtitle">Disney Lorcana의 세계로 오신 걸 환영해요</p>
+      </div>
