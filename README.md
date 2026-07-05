@@ -16,11 +16,9 @@ open index.html          # macOS — 브라우저로 바로 열기
 python3 -m http.server   # http://localhost:8000
 ```
 
-진입점:
+진입점: `index.html` — 메인 데모(보드 시뮬레이션). 청중이 접속하는 페이지.
 
-- `index.html` — 메인 데모(보드 시뮬레이션). 청중이 접속하는 페이지.
-- `index-legacy.html` — 초기 reveal.js 기반 prototype(미사용, 보관용).
-
+첫 화면에서 언어(한국어 / English)를 선택할 수 있습니다.
 조작: `Space`/`→` 다음, `Backspace`/`←` 이전, `Esc` 카드 모달 닫기.
 우측 하단 컨트롤에서 자막·말풍선 토글, 글자 크기 조절.
 
@@ -32,6 +30,7 @@ python3 -m http.server   # http://localhost:8000
 | `demo-board.js` | 페이지 진행 + 보드/카드/잉크웰/챌린지 시뮬레이션 엔진 |
 | `cards.js` | 카드 데이터 |
 | `demo-board.css` | 스타일 |
+| `i18n/` | 다국어 카탈로그(`ko.js`/`en.js`) + `t()` 코어(`i18n.js`) |
 | `res/` | 잉크 색 로고·타이틀·일루미니어 등 이미지 에셋 |
 | `archived/` | 배포 매뉴얼·기획 문서 (git 추적 제외) |
 
