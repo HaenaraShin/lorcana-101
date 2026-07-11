@@ -38,7 +38,7 @@ window.MESSAGES.en = {
         '          <small>A different look/stats of the same character</small>\n        ',
       stats:
         '\n          <strong>Strength ¤ {strength}</strong> <small>damage dealt when challenging</small><br>\n' +
-        '          <strong>Willpower ⛉ {willpower}</strong> <small>damage it can take (banished if exceeded)</small>\n        ',
+        '          <strong>Willpower ⛉ {willpower}</strong> <small>damage it can take (banished when reached)</small>\n        ',
       lore: '<strong>Lore ◆ {lore}</strong><br>Lore gained when this character quests',
     },
     'ink-rules': {
@@ -80,7 +80,7 @@ window.MESSAGES.en = {
         '          A character can then pay the <strong>Move Cost</strong> shown on the left\n' +
         '          to move there and gain its effects.<br>\n' +
         '          A location can also be <strong>challenged</strong>, and is <strong class="hl">banished</strong>\n' +
-        '          if the damage it takes exceeds its Willpower (⛉).<br>\n' +
+        '          if the damage it takes reaches its Willpower (⛉).<br>\n' +
         '          During the <strong>SET</strong> step of your beginning phase you gain Lore equal to\n' +
         '          the <strong>Lore (◆)</strong> shown on the location.\n        ',
     },

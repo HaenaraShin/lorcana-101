@@ -2394,6 +2394,13 @@ body.victory-mode .card.exerted {
   cursor: default;
 }
 
+/* 승리 화면에서 next 버튼(page-controls)을 victory-badge(9500) 위로 끌어올림 —
+   풀스크린 배지의 backdrop-filter 블러/가림 없이 선명하게 보이고 클릭도 유지.
+   victory-mode 한정 스코프: 평상시엔 base z-index(410) 유지 → card-modal(700) 등과의 순서 불변. */
+body.victory-mode .page-controls {
+  z-index: 9600;
+}
+
 /* 풀스크린 VICTORY 배지. */
 .victory-badge {
   position: fixed;

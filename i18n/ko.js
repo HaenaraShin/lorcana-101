@@ -37,7 +37,7 @@ window.MESSAGES.ko = {
         '          <small>같은 캐릭터의 다른 모습/스탯</small>\n        ',
       stats:
         '\n          <strong>힘 ¤ {strength}</strong> <small>챌린지 시 주는 데미지</small><br>\n' +
-        '          <strong>의지력 ⛉ {willpower}</strong> <small>받을 수 있는 데미지 한계 (초과 시 banish)</small>\n        ',
+        '          <strong>의지력 ⛉ {willpower}</strong> <small>받을 수 있는 데미지 한계 (이상이면 banish)</small>\n        ',
       lore: '<strong>로어 ◆ {lore}</strong><br>이 캐릭터로 퀘스트할 때 얻는 Lore 점수',
     },
     'ink-rules': {
@@ -79,7 +79,7 @@ window.MESSAGES.ko = {
         '          이후 캐릭터가 좌측의 <strong>이동 비용(Move Cost)</strong>을 지불하면\n' +
         '          그 로케이션으로 이동해 효과를 적용받습니다.<br>\n' +
         '          로케이션 자체도 <strong>챌린지의 대상</strong>이 될 수 있고,\n' +
-        '          받은 데미지가 의지력(⛉)을 넘으면 <strong class="hl">banish</strong>됩니다.<br>\n' +
+        '          받은 데미지가 의지력(⛉) 이상이면 <strong class="hl">banish</strong>됩니다.<br>\n' +
         '          자신의 비기닝 페이즈 <strong>SET</strong> 단계에 로케이션 위에 표시된\n' +
         '          <strong>로어(◆)</strong>만큼 자동으로 Lore를 얻습니다.\n        ',
     },
